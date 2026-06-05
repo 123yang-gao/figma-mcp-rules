@@ -1,0 +1,246 @@
+---
+description: Figma SVG 图标 — viewBox 留白规避（nuxt-svgo、icons:trim、禁止 CSS 放大）
+globs:
+  - app/assets/icons/**
+  - app/components/**/*.vue
+alwaysApply: false
+---
+
+# Figma SVG 图标 — viewBox 留白（强制）
+
+编辑 `app/assets/icons/` 或任何使用 **nuxt-svgo**（`<svgo-*>`）的组件时，**必须**遵守本节。通用 TypeScript / i18n 規範見 **`CLAUDE.md`**；**Icon 是否复用旧库、是否必须重新导出** 见 **`project-conventions.mdc`** § Icon 资源。
+
+## 落盘位置（强制）
+
+- **所有**从 Figma 拉取的 **SVG 图标**必须放在 **`app/assets/icons/`**（根目录扁平，**不**建子文件夹）。
+- **禁止**把 SVG UI 图标放进 `app/assets/imgs/`（`imgs/` 仅用于位图，见 **`figma-design-system.mdc`**）。
+
+## Flat Icon — Dev Mode 等价导出（侧栏 / 导航 icon，强制）
+
+Figma Dev Mode **Export SVG** 与 Figma MCP **不是同一条管线**。MCP 无「一键 Export SVG」接口，但 Agent **必须**用下列流程产出与 Dev Mode 等价的 **`viewBox="0 0 24 24"`** 单文件（已验证：`sidebar_fishing.svg`）。
+
+### 必须
+
+| 步骤 | 说明 |
+|------|------|
+| 1. 选对节点 | `get_design_context` 针对**设计稿里的 icon 实例**（如侧栏 `Sidebar Menu Items` 内 `size-[24px]` 的 `Flat Icon / *`），**禁止**只下组件库 40×40 母版或内层单个 Vector |
+| 2. 拉齐子层 | 组合 icon（描边 Fishing、双色 Lottery 等）须下载**每个**子 Vector 的 MCP asset URL |
+| 3. 算 placement | 从 MCP 代码读每层 `absolute inset-[…]` 与 stroke overflow（如 `inset-[-13.64%_-15%]`），在 **24×24** 帧上算 expanded slot 原点 → `translate(x y)` |
+| 4. 合并落盘 | 单层 `<svg viewBox="0 0 24 24">` + 每层 `<g transform="translate(…)"><path …/></g>`；`stroke`/`fill` → **`currentColor`** |
+| 5. 页面用法 | 固定 **24×24** 槽位 + `<svgo-* class="…" style="width:24px;height:24px">` 或等效 CSS；**禁止** per-icon `iconW`/`iconH`/`glyphSize()` 二次缩放 |
+| 6. 验收 | 目视对照 `get_screenshot`；**禁止**对合并后的 24×24 flat icon 跑 `icons:trim` |
+
+### 禁止（侧栏 / Flat Icon 场景）
+
+| 禁止 | 原因 |
+|------|------|
+| `prepare-sidebar-icons.mjs` trim / 手拼 path / `buildNestedFrameSvg` | 与 Dev Mode 坐标系不一致，描边 icon 易错 |
+| 嵌套 `<svg x y width height>` 作定位 | nuxt-svgo 可能压扁 stroke |
+| 只对 artwork trim 后再设 CSS 缩小 | viewBox 与槽位双重缩放（Hot/Fishing 历史问题） |
+| 组件库 40×40 的 MCP 图层用于 24×24 侧栏 | overflow 比例不同 |
+| **stroke 描边 Flat Icon 不加 `filled`** | nuxt-svgo 默认 `.nuxt-icon--fill * { fill: currentColor }` 会把闭合 path 填实，盖住描边子层（Close 圆环 + X 典型） |
+
+### nuxt-svgo 与 stroke 描边图标（强制）
+
+项目 `defaultImport: componentext`，`<svgo-*>` 经 **NuxtIcon** 包装。默认 **`filled` 未传** 时注入：
+
+```css
+.nuxt-icon--fill, .nuxt-icon--fill * { fill: currentColor; }
+```
+
+| SVG 类型 | 页面用法 | SVG 资源 |
+|----------|----------|----------|
+| **fill 实心**（侧栏 Sports、勾选圆底等） | 默认即可，或显式不传 `filled` | `fill="currentColor"` |
+| **stroke 描边**（Close 圆+X、Fishing 钩等） | **必须** `<svgo-* filled … />` | 每个 `stroke=` 的 path **必须** `fill="none"` |
+| **混合**（实心圆 + 描边勾，如 checkbox checked） | 按主视觉：勾选态可默认 fill | 描边 path 仍写 `fill="none"` 或 `stroke` 硬编码 |
+
+**多层 stroke 合并件**（圆 + X）：图层顺序 **底图先、叉号后**；`compose-figma-flat-icon.mjs` 已对含 `stroke=` 且无 `fill=` 的 path 自动补 `fill="none"`。
+
+**验收**：浏览器 DevTools 看渲染后 path 是否被填实；勿只看 `.svg` 源文件。
+
+
+| 用途 | 路径 |
+|------|------|
+| 通用合并库 | `scripts/lib/compose-figma-flat-icon.mjs` — `composeFlatIconFromMcp(layers)` |
+| 范例脚本 | `scripts/download-sidebar-fishing.mjs` — 刷新 MCP URL 后 `node scripts/download-sidebar-fishing.mjs` |
+| 人工兜底 | 设计在 Figma 选中 **Flat Icon 实例** → Export SVG → 覆盖 `app/assets/icons/*.svg`，改 `currentColor` |
+
+```svg
+<!-- ✅ Dev Mode 等价：24×24 根坐标 + translate 定位（sidebar_fishing.svg） -->
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(4.5 7.5)">
+    <path d="…" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- 其余子层 -->
+</svg>
+```
+
+单层 fill icon（如 Sports 整帧一张 MCP 图）：可直接 `pnpm assets:download` 落盘，仍须保证最终 **`viewBox="0 0 24 24"`** 且页面 **24×24** 显示；**不要** trim 破坏帧内 inset。
+
+## 品牌色 / 社媒圆标（多色 fill，如 `social_*.svg`）
+
+Figma MCP 批量导出的 **30×30 圆标**（Telegram / Facebook / WhatsApp 等）与 Flat Icon 流程不同，须单独验收。
+
+### 必须
+
+| 步骤 | 说明 |
+|------|------|
+| 1. 落盘后打开 SVG | 目视或 DevTools：圆标 + 内部 glyph 均可见 |
+| 2. 修正常见 MCP 缺陷 | **`clipPath` 内 `<rect>` 无 `width`/`height`** → 裁切为 0、**仅部分 icon 不显示**；删除无效 `clipPath` 或补全 `width="30" height="30"`，优先**扁平 `<path>`**（参考已修复的 `social_telegram.svg`） |
+| 3. 填色 | 品牌色用 **`#RRGGBB` 硬编码**（或 `currentColor` 单色）；`filled` 表示保留原色（见 nuxt-svgo README） |
+| 4. viewBox | 同组 icon 统一（如 **`0 0 30 30`**），避免 `-1 -1 32 32` 与 `0 0 30 30` 混用导致对齐不一 |
+| 5. 提交前 | **`pnpm icons:verify`**（会拦截无效 `clipPath`） |
+
+### 禁止
+
+| 禁止 | 原因 |
+|------|------|
+| 未目视就认为「三个都能显示」 | 坏 `clipPath` 可能只影响其中 2 个，WhatsApp 无 clip 时仍正常 |
+| 保留 `var(--fill-0, …)` 且依赖 Figma 运行时变量 | 浏览器无 `--fill-0`，仅靠 fallback 时若被裁切仍不可见 |
+| 同排社媒 icon 混用不同 viewBox / 无 `filled` 却期望品牌多色 | 对齐与填色不一致 |
+
+---
+
+## 问题（trim 适用场景 — 非 Flat Icon 24×24 合并件）
+
+Figma MCP 导出的 SVG 常带 **过大 `viewBox`**（`<filter>` 阴影、组件外框）。在固定槽位用 `<svgo-*>` 时，图形会**四周留白、显小**——属于**资源未 trim**，与「外框 vs 图形」是不同问题。
+
+另：**Figma 外框尺寸 ≠ 内层图形尺寸**（如外框 44×44、图形 20×18）。勿把外框边长设为图标组件的唯一尺寸。
+
+## 禁止（不得用样式掩盖）
+
+- `<img src="*.svg">` 展示 UI 图标（除非非 svgo 場景且團隊明確允許）
+- 父级 `:deep(svg) { transform: scale(...) }` 或 `transform: scale()` 仅用于「放大」图标
+- 负 `inset` / 超大百分比仅用于「放大」图标
+- **Checkbox 勾選態**：禁止用 CSS `::after` 手画勾代替 Figma `Check box` 选中图层；须导出 SVG（见 **`figma-auth-form.mdc`** §1.3）
+
+## 任务范围限制（强制 — 防误下、防全库 trim）
+
+**原则：`get_design_context` 当前屏/当前 Modal 树里用到的资源，才允许进 `download-figma-assets.mjs` 与 git diff。**
+
+### 禁止（Agent / 人工均适用）
+
+| 禁止 | 说明 |
+|------|------|
+| **全库 `pnpm icons:trim` 作为 Figma 任务收尾** | 会改写 `app/assets/icons/` 下**全部**存量 SVG（终端出现上百行 `trim xxx.svg`），与当前设计稿无关 |
+| **在 `assets` 里登记设计清单外的 URL** | 不得把其它页面/组件的 MCP asset 顺手写入 `download-figma-assets.mjs` |
+| **任务结束后保留 `assets` 条目** | 下载完成并验收后**清空** `scripts/download-figma-assets.mjs` 的 `assets`（恢复注释模板） |
+| **无清单跑 `pnpm assets:download`** | `assets` 为空时不执行；禁止为「跑一下试试」填无关 URL |
+
+### 必须
+
+1. **写清《设计资源清单》**（与 **`figma-auth-form.mdc`** §0 设计清单一致）：列本任务将新增的 icon / 位图**文件名 + Figma 节点**。
+2. **`download-figma-assets.mjs` 只登记清单内项**；多层 icon 合并为一个 `.svg` 后再登记（见下节 **多层 / 组合图标**）。
+3. **下载后仅 trim 本次文件**：`pnpm assets:download`（内含 `--manifest` trim）或 `pnpm icons:trim:manifest`，或 `node scripts/trim-svg-icons.mjs modal_title_close.svg`。
+4. **手改单个 SVG 后**：只 trim 该文件（同上，传文件名），**不要**全库 trim。
+5. **提交前**：`git diff app/assets/icons/` 应**只有**清单内新增/修改文件；若出现大量无关 `M`，说明误跑全库 trim，须 `git checkout -- app/assets/icons/` 后重做。
+
+### 命令对照
+
+| 场景 | 命令 |
+|------|------|
+| 本任务 Figma 批量下载 | `pnpm assets:download`（下载 + **仅** manifest 内 SVG trim） |
+| 仅 trim 本次下载的 SVG | `pnpm icons:trim:manifest` |
+| 手改单个/少数 SVG | `node scripts/trim-svg-icons.mjs 文件名.svg` |
+| 全库 icon 维护（非 Figma 单屏任务） | `pnpm icons:trim`（会 WARN；仅维护期使用） |
+| 提交前自检 | `pnpm icons:verify` |
+
+实现：`scripts/lib/trim-svg-icon.mjs`；下载记录：`scripts/.download-manifest.json`。
+
+## 必须（资源层 — viewBox trim）
+
+| 场景 | 命令 |
+|------|------|
+| 从 Figma 批量下载（本任务） | `pnpm assets:download` |
+| 新增/手改/替换单个 SVG | `node scripts/trim-svg-icons.mjs <file>.svg` |
+| 提交前自检 | `pnpm icons:verify` |
+
+实现：`scripts/lib/trim-svg-icon.mjs`（去 filter、按 path 几何收紧 viewBox + 1px 边距；含 `<g transform>` 时保留原 viewBox）。
+
+## 外框尺寸 vs 图形尺寸（强制）
+
+**Flat Icon / 侧栏导航（24×24）**：SVG 即 **24×24 全帧**，页面槽位 **24×24**，inset 已烘焙在 SVG 内（见上节 **Flat Icon — Dev Mode 等价导出**）。**禁止**外框 24 + 内层再设 17.85×20.4 等 glyph 尺寸。
+
+**其他场景**（如 44×44 点击区 + 较小 glyph）：Figma 常有两层尺寸，须分别实现：
+
+| 层级 | 示例 | 实现 |
+|------|------|------|
+| 外框 / 点击区 | 44×44 | 容器 `span` + `display: flex` + 居中 + 固定 `width`/`height` |
+| 内层 Vector / Icon | 20×18 | `<svgo-*>` 上 `width`/`height` 或包裹层 CSS 限制图形尺寸 |
+
+从 `get_design_context` 对照：外层 `size-[44px]` **≠** 内层 `w-[20px] h-[18px]`。勿仅设外框尺寸而让 SVG viewBox 留白导致图形偏小。
+
+```vue
+<span class="menu_icon_slot">
+  <svgo-side-home class="menu_icon_glyph" />
+</span>
+```
+
+```scss
+.menu_icon_slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.menu_icon_glyph {
+  width: 20px;
+  height: 18px;
+}
+```
+
+## 代码约定
+
+- 图标仅 `app/assets/icons/*.svg`；`nuxt-svgo` 依檔名生成 `<svgo-{kebab-name}>`（見 `nuxt.config` 的 `svgo` 設定）
+- 需要 `filled` 等屬性時依既有元件用法（如 `<svgo-sign-lock filled />`）
+
+## 多层 / 组合图标（强制 — 防 MCP 只下到一层）
+
+Figma 里**一个 icon 实例**常含多个 Vector（例：`Flat Icon / Fishing` = 钩 + 圆 + 线）。**侧栏 / Flat Icon** 须走 **§ Flat Icon — Dev Mode 等价导出**（`compose-figma-flat-icon.mjs`），**禁止**只登记一个 MCP URL 或 `prepare-sidebar-icons.mjs` 手拼。
+
+其他场景（Modal 关闭钮、Checkbox 等）：
+
+`trim-svg-icon.mjs` 按 path `d` / circle / rect 算包围盒，**不解析** `<g transform="translate scale">`。
+
+| 做法 | 说明 |
+|------|------|
+| **优先：扁平坐标** | 合并后把所有图形写在**根坐标系**（如 `viewBox="0 0 32 32"`），**不要**用 `<g transform>` 定位 |
+| 若必须用 transform | trim 会**保留原 viewBox**、仅去 filter；合并前须设好正确 viewBox |
+| trim 后自检 | 打开 SVG 目视：圆环 + × 都在 viewBox 内；或数 `<path>` / `<circle>` 是否与 Figma 子层数量一致 |
+
+```svg
+<!-- ✅ 扁平：trim 安全 -->
+<svg viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="12" stroke="#fff" />
+  <path d="M13.1 13.1L18.9 18.9" stroke="#fff" />
+  <path d="M18.9 13.1L13.1 18.9" stroke="#fff" />
+</svg>
+
+<!-- ❌ 易裁切：× 在 translate 后，trim 可能只保留局部 bbox -->
+<svg viewBox="0 0 32 32">
+  <g transform="translate(12 12) scale(1.43)">
+    <path d="M0.8 0.8L4.8 4.8" />
+  </g>
+</svg>
+```
+
+## Agent 检查清单
+
+1. **Flat Icon / 侧栏**：已用 **§ Dev Mode 等价导出**（设计稿 24×24 实例 + `compose-figma-flat-icon` 或人工 Export）；**未** trim 合并件、**未** glyphSize 二次缩放
+2. **任务范围**：`assets` 仅含本屏清单内 URL；`git diff app/assets/icons/` 无无关存量 icon
+3. trim **仅本次/指定文件**（且**非**已合并的 24×24 flat icon），**禁止** Figma 单屏任务结尾跑全库 `pnpm icons:trim`
+4. **多层 icon**：子 Vector 数量与 Figma 一致；目视或数 `<path>` 无缺失
+5. 运行 **`pnpm icons:verify`**（含 **clipPath `<rect>` 宽高** 校验；社媒/品牌圆标须目视 100% 可见）
+6. **品牌色 / 社媒 `social_*`**：已按 § 品牌色 / 社媒圆标 扁平化或修 clipPath；同组 viewBox 一致
+7. 不得建议用 CSS 放大解决「图标太小」
+8. 任务完成 → **清空** `download-figma-assets.mjs` 的 `assets` 条目
+
+## 相关文件
+
+- `scripts/lib/compose-figma-flat-icon.mjs`、`scripts/download-sidebar-fishing.mjs`（范例）
+- `scripts/trim-svg-icons.mjs`、`scripts/verify-svg-icons.mjs`
+- `scripts/prepare-sidebar-icons.mjs` — **勿用于新增侧栏 Flat Icon**（仅存量 trim/热构建）
+- `figma-pixel-perfect.mdc` §7 ICON 导出
+- **`figma-auth-form.mdc`** — Modal 关闭钮、Checkbox 选中态等资源命名与验收

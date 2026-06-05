@@ -1,0 +1,159 @@
+---
+description: 项目设计系统与 Figma MCP 流程 — 组件路径、Token、资源管线、实现检查清单
+globs:
+  - app/**/*.vue
+  - app/**/*.ts
+  - app/assets/**
+alwaysApply: false
+---
+
+# Figma design system — sweepstakes-shell
+
+将 Figma 翻译为本仓库代码时的**项目结构与流程**。分步实现请加载 **`figma-implement-design`**（`.cursor/skills/figma-implement-design/`）。刷新本文件请加载 **`figma-create-design-system-rules`**。
+
+## Quick start（每次 Figma 任务）
+
+1. 加载技能 **`figma-implement-design`**，按步骤执行。
+2. 遵守规则优先级（见下）及专项文件：**`figma-pixel-perfect.mdc`**、**`figma-raster-assets.mdc`**、**`figma-svg-icons.mdc`**、**`figma-auth-form.mdc`**（登入/註冊/表單 Modal）、**`megaphps2-molecules.mdc`**（按鈕/表單等互動狀態，Figma `26291-49389`）。
+3. MCP：`https://mcp.figma.com/mcp`（`.cursor/mcp.json`）；工具缺失时在 Cursor → Settings → MCP 登录 Figma。
+
+## Rule priority
+
+1. **`CLAUDE.md`** — TypeScript、i18n、lint、專案慣例
+2. **`.cursor/rules/project-conventions.mdc`** — i18n 文案、組件復用、Icon 資源（alwaysApply）
+3. **`.cursor/rules/figma-pixel-perfect.mdc`** — 1:1 像素级还原（§1–9）
+4. **`.cursor/rules/figma-auth-form.mdc`** — 表單/Auth Modal（Input 右槽、Checkbox、Close、Nuxt 接線）；**實作 `@auth` 或 `Mega*` 表單元件時必讀**
+5. **`.cursor/rules/megaphps2-molecules.mdc`** — MOLECULES 互動規格（按鈕四態、Filter/Tab Selected、已落地頁面互動對照）
+6. **This file** — 项目结构、MCP 流程、检查清单
+7. **`.cursor/rules/lint-rule.mdc`** — 完成前须 `pnpm lint`
+8. Generic Figma MCP defaults
+
+On conflict, higher priority wins.
+
+## 资源路径（强制）
+
+从 Figma 拉取或导出的静态资源**必须**遵守以下分区，**禁止**混放：
+
+| Figma 资源类型 | 落盘路径 | 说明 |
+|----------------|----------|------|
+| **图标**（SVG，含 UI icon、小图形） | **`app/assets/icons/`**（根目录扁平） | 一律 `.svg`；用 `<svgo-*>`。**禁止**放进 `imgs/` |
+| **位图**（PNG / JPG / WebP） | **`app/assets/imgs/<子目录>/`** | 必须落在既有子目录内；**禁止**放在 `imgs/` 根目录 |
+
+### `imgs/` 子目录（沿用现有划分）
+
+新增位图前，先对照同功能已有资源所在文件夹；**优先复用已有目录**，勿随意新建顶层目录。
+
+| 子目录 | 典型用途 |
+|--------|----------|
+| `bg` | 全屏/页面背景 |
+| `buy` | 购买、礼包、支付相关 |
+| `common` | 全局共用（币种、通用装饰等） |
+| `download` | 下载页 |
+| `footer` | 页脚 |
+| `form` | 表单 |
+| `games/` | 游戏玩法资源；子目录：`CashVoucher`、`FreeSpin`、`GiftCode`、`GoldenEgg`、`PrizeWheel`、`Raffle`、`TemuTicket` |
+| `help` | 帮助中心 |
+| `home` | 首页 |
+| `invite` | 邀请 |
+| `kyc` | KYC |
+| `member` | 会员 |
+| `newPlayerTask` | 新手任务 |
+| `promo` | 活动/促销 |
+| `sidemenu` | 侧栏菜单 |
+| `signIn` | 签到 |
+| `ticket` | 票券/宝箱 |
+| `vendor` | 厂商/游戏列表 |
+
+**映射规则：**
+
+- 实现 `app/components/<Feature>/` 或 `app/pages/<page>.vue` 时，位图放入与功能对应的 `imgs/` 目录（如 `Invite/` → `imgs/invite/`，`SignIn/` → `imgs/signIn/`）。
+- 多游戏共用壳层 → `imgs/games/<GameName>/`（目录名与现有 PascalCase 子文件夹一致）。
+- 全站共用 → `common`、`sidemenu`、`footer` 等。
+- 文件名：与周边资源一致，常用 **kebab-case**（如 `invite-reward.png`）；`pnpm assets:download` 由 camelCase key 转 snake_case 时可再改为项目惯用命名。
+
+**引用示例：**
+
+```scss
+background: url("~/assets/imgs/invite/invite-reward.png") center/contain;
+```
+
+```vue
+<svgo-side-download />
+<!-- 对应 app/assets/icons/side-download.svg -->
+```
+
+## Design system structure
+
+### Tokens and typography
+
+- CSS variables: `app/assets/css/_root.scss`（`--gradient-*`、`--color-*` 等）
+- 全局样式：`app/assets/css/main.scss`、`_base.scss`、`_mixins.scss`
+- 优先复用既有 token；Figma 新色若可复用则映射到现有变量
+- **渐变装饰线 / divider**：必须按 Figma stops 写 `linear-gradient`，对称线禁止单向 `accent → transparent`；见 **`figma-pixel-perfect.mdc`** §5
+
+### Component library
+
+| Kind | Location | Examples |
+|------|----------|----------|
+| Feature UI | `app/components/<feature>/` | `SignIn/`, `Invite/`, `Profile/` |
+| Pages | `app/pages/` | `index.vue`, `inbox.vue` |
+| Layouts | `app/layouts/` | 依 Nuxt 路由 |
+| Composables / stores | `app/composables/`, `app/stores/` | 需手動 import store（见 `CLAUDE.md`） |
+
+- 新组件：**PascalCase** 目录/文件名，`<script setup lang="ts">`，typed `defineProps`
+- 复用现有组件后再新建
+- 用户可见字符串：遵守 **`project-conventions.mdc`** § i18n（有规范 Key 用 `$t`；无 Key 硬编码；禁止临时新增 Key）
+
+## Figma MCP integration (required every time)
+
+1. Parse URL → `fileKey`, `nodeId` with `:`（`15008-14040` → `15008:14040`）。
+2. `get_design_context(fileKey, nodeId, clientLanguages=typescript, clientFrameworks=vue,nuxt)`。
+3. If truncated → `get_metadata`，再对子节点 `get_design_context`。
+4. `get_screenshot` 作视觉对照。
+5. **Assets** — 按上表落盘；生产代码禁止 MCP asset URL。
+6. 实现为 **Vue 3 SFC + scoped CSS**（勿直接贴 MCP 的 Tailwind 输出）。
+7. 对照 screenshot 验收 layout、字重、颜色、资源。
+
+## Assets
+
+### Standard pipeline
+
+- **位图：** `app/assets/imgs/<子目录>/` → **`figma-raster-assets.mdc`**
+- **Flat Icon / 侧栏 SVG（24×24）：** **`figma-svg-icons.mdc`** § Dev Mode 等价导出 → `scripts/lib/compose-figma-flat-icon.mjs`
+- **其他 SVG 图标：** `app/assets/icons/*.svg` → **`figma-svg-icons.mdc`**（trim 不适用于已合并 flat icon）
+- 批量下载单层 icon：`scripts/download-figma-assets.mjs` — **仅登记本任务设计清单**
+- `scripts/figma-screenshot-exports.json` 中路径须含子目录，如 `invite/ann-share-icon.png`
+
+## Styling conventions
+
+- 类名：与周边组件一致（多为 BEM 或 feature 前缀，如 `sign_in_*`）
+- Scoped CSS；避免标签选择器
+- Template：props/对象使用 optional chaining（`user?.name`）
+- 轮播：**SwiperJS**（`nuxt-swiper`）— 见 **`figma-pixel-perfect.mdc`** §9
+
+## Implementation checklist
+
+- [ ] `get_design_context` + `get_screenshot` completed
+- [ ] **Flat Icon / 侧栏**：`viewBox="0 0 24 24"` 单文件 + 页面 24×24（见 **`figma-svg-icons.mdc`** § Dev Mode 等价导出）
+- [ ] **SVG 图标**仅在 `app/assets/icons/`（未放入 `imgs/`）
+- [ ] **位图**在 `app/assets/imgs/<正确子目录>/`（非 `imgs/` 根目录）
+- [ ] Raster: **2×** + `pnpm assets:verify:raster`（已登记时）
+- [ ] Icons: 仅 trim **本任务** SVG（`assets:download` / `icons:trim:manifest`）；`git diff app/assets/icons/` 无无关存量文件
+- [ ] Icons: `pnpm icons:verify`（含无效 clipPath；**社媒/品牌多色圆标**须目视全部可见，见 **`figma-svg-icons.mdc`** § 品牌色 / 社媒圆标）
+- [ ] Icon slots: outer hit area (CSS) vs inner glyph (尺寸分开)
+- [ ] Transforms: every `rotate` / `scale` in context has matching CSS
+- [ ] **渐变 divider / 装饰线**（若适用）：已读 Figma stops，对称渐变非单向淡出；未用整条 `opacity` 代替（**`figma-pixel-perfect.mdc`** §5）
+- [ ] Matches **`CLAUDE.md`** and **`figma-pixel-perfect.mdc`**
+- [ ] i18n：有规范 Key 用 `$t`；无 Key 已硬编码（见 **`project-conventions.mdc`**）；未临时新增 Key
+- [ ] `pnpm lint`（及 TS 变更时 `pnpm type-check`）
+- [ ] Visual check against screenshot before done
+- [ ] **表單/Auth Modal**（若適用）：已讀 **`figma-auth-form.mdc`** §5 並逐項自檢（Input Right、Checkbox、Close、Nuxt 元件名）
+
+## Skills map
+
+| Task | Skill |
+|------|--------|
+| Implement UI from Figma URL | `figma-implement-design` |
+| Login / register / auth form from Figma | `figma-implement-design` + **`figma-auth-form.mdc`** |
+| Button / control interaction states (MOLECULES) | **`megaphps2-molecules.mdc`** |
+| Generate / update these rules | `figma-create-design-system-rules` |

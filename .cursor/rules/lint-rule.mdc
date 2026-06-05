@@ -1,0 +1,25 @@
+---
+description: Agent 完成代碼修改後必須執行 pnpm lint 並修正至通過，且禁止使用 TS any (DoD)
+alwaysApply: true
+---
+
+# Agent Definition of Done (DoD)
+
+## Trigger
+當你在 Agent Mode 中完成代碼修改、新增功能或重構任務時。
+
+## Required Action
+在宣佈任務完成之前，你必須自動執行以下步驟：
+1. **執行驗證**：依序在終端機執行 `pnpm lint`。
+2. **自動修正**：
+    - 若 `pnpm lint` 回報錯誤，請根據錯誤訊息直接修改程式碼。
+    - 重複執行上述兩項指令直到皆輸出 0 errors/warnings。
+3. **完成回報**：僅在兩者皆通過後，才告知用戶任務已完成。
+4. **逐項確認**：不能只看 exit code，必須逐項檢查 `pnpm lint` 的輸出內容，確認是否有 `error` 或 `warning`。
+5. **結果分級**：若有任何 `error`，必須先修正後再重跑；若只有 `warning`，需區分是本次改動新增，或是專案既有問題，並在回報時說明。
+6. **自動修正後重查**：若 `pnpm lint` 使用 `--fix` 自動修改檔案，必須重新閱讀受影響檔案，確認沒有殘留語法錯誤、重複宣告或與預期不符的內容，再宣告完成。
+
+## Constraints
+- 嚴禁跳過 lint 步驟。
+- 所有的代碼修正必須符合專案現有的 ESLint/Prettier 配置。
+- **禁止使用 TypeScript `any`**：撰寫或修改 TypeScript 時不得使用 `any` 型別；需使用明確型別、`unknown` 或適當泛型。

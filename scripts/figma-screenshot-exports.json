@@ -1,0 +1,13 @@
+{
+  "fileKey": "",
+  "exportScale": 2,
+  "comment": "screenshotExports 的 key 为 app/assets/imgs 下的相对路径（须含子目录，禁止 imgs 根目录）。width/height 为 Figma 1× 设计 px。",
+  "minBytes": {
+    "navButtonBg": 8000,
+    "headerBg": 30000,
+    "banner": 20000,
+    "pageBg": 15000,
+    "default": 5000
+  },
+  "screenshotExports": {}
+}

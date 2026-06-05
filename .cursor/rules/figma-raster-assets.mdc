@@ -1,0 +1,88 @@
+---
+description: Figma 位图导出空白占位图 — get_screenshot 回退、体积校验、禁止只调 CSS
+globs:
+  - app/assets/imgs/**
+  - app/components/**/*.vue
+alwaysApply: false
+---
+
+# Figma 位图 — MCP 空白图（强制）
+
+编辑 `app/assets/imgs/` 或引用位图的组件时遵守本节。路径总览见 **`figma-design-system.mdc`** § 资源路径。
+
+## 落盘位置（强制）
+
+- **所有**从 Figma 拉取的 **PNG / JPG / WebP** 必须放在 **`app/assets/imgs/<子目录>/`**。
+- **禁止**写入 `app/assets/imgs/` 根目录（无子文件夹）。
+- **禁止**把 UI 图标 SVG 放进 `imgs/`（图标只属于 `app/assets/icons/`）。
+- 子目录必须与项目现有划分一致（`invite`、`signIn`、`games/PrizeWheel`、`common` 等）；新增文件前先 `ls app/assets/imgs/` 对照同功能目录。
+
+## 问题
+
+`get_design_context` 返回的 `figma.com/api/mcp/asset/...` 经 `pnpm assets:download` 下载时：
+
+- HTTP **200**，文件已写入目标路径
+- 内容常为 **~2KB 透明/全黑占位 PNG**
+- 页面表现为**背景空白**
+
+**禁止**仅用 CSS 掩盖——须**替换为有效位图文件**。
+
+## 位图必须 2× 导出（强制）
+
+`app/assets/imgs/**` 下位图：
+
+| 项 | 约定 |
+|----|------|
+| 文件像素 | Figma 设计尺寸的 **`exportScale` 倍**（默认 **2×**，见 `scripts/figma-screenshot-exports.json`） |
+| 页面 CSS | 仍用 Figma **1× 设计 px**（rem 轉換依 `CLAUDE.md`） |
+| `get_screenshot` | `maxDimension` ≥ `max(设计宽, 设计高) × exportScale` |
+| `screenshotExports` 的 key | **相对路径**，含子目录，如 `invite/ann-share-icon.png` |
+
+## 解决方案（按优先级）
+
+### 方案 A：`get_screenshot` 导出背景层（推荐）
+
+1. 在 Figma 选中**背景层**（不要选整页 Frame）。
+2. Figma MCP：**`get_screenshot`**（`fileKey` / `nodeId` 见 `figma-screenshot-exports.json`）。
+3. 将 PNG **覆盖**到 `app/assets/imgs/<子目录>/<文件名>`。
+4. 在组件中 `import` 或 `url('~/assets/imgs/...')` 引用。
+
+### 方案 B：MCP `asset` URL + 体积校验
+
+1. 在 `scripts/download-figma-assets.mjs` 的 `assets` 中，**组名 = imgs 子目录**（如 `invite: { annShareIcon: 'url' }` → `imgs/invite/ann_share_icon.png`）。
+2. `pnpm assets:download`
+3. WARN 或 verify 失败 → 改用方案 A。
+
+### 方案 C：MCP URL 过期
+
+重新 `get_design_context`，更新 `download-figma-assets.mjs` 中的 URL，再下载并 verify。
+
+## 禁止
+
+- 位图放在 `app/assets/icons/` 或 `imgs/` 根目录
+- 在代码中提交 `figma.com/api/mcp/asset/...` 作为 `src`
+- 发现空白图只改 `object-fit` 而不换文件
+
+## 命令
+
+| 命令 | 作用 |
+|------|------|
+| `pnpm assets:download` | 按 `assets` 组名写入 `imgs/<组名>/` |
+| `pnpm assets:verify:raster` | 校验 `screenshotExports` 中登记的路径 |
+| `pnpm assets:verify` | 位图 + SVG 图标一并校验 |
+
+配置：**`scripts/figma-screenshot-exports.json`**（key 为 `子目录/文件名`）。
+
+## Agent 检查清单
+
+1. 确认路径为 `app/assets/imgs/<已有子目录>/...`，而非根目录或 `icons/`
+2. 在 `figma-screenshot-exports.json` 用**完整相对路径**登记
+3. 新增/更新后 **`pnpm assets:verify:raster`**（已登记时）
+4. 对照 Figma **`get_screenshot`** 验收
+
+## 与 SVG 图标的区别
+
+| 问题 | 处理 |
+|------|------|
+| UI 图标（SVG） | 仅 `app/assets/icons/` → `figma-svg-icons.mdc` |
+| 位图空白 / 2× | `imgs/<子目录>/` → 本节 |

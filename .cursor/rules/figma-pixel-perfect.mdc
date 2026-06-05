@@ -1,0 +1,124 @@
+---
+description: Figma 1:1 像素级还原强制规范（旋转、固定 px、背景、描边、渐变边框、轮播等）
+globs:
+  - app/**/*.vue
+  - app/**/*.ts
+  - app/assets/**
+alwaysApply: false
+---
+
+# Figma 1:1 像素级还原（强制）
+
+实现 Figma 设计稿时遵守本节。与 **`figma-implement-design`** 技能一并生效；冲突时本节为 Figma 还原专项约束。專案通用規範見 **`CLAUDE.md`**。
+
+**专项细则（勿在本文件重复展开）：**
+
+- 位图 2×、空白占位图 → **`.cursor/rules/figma-raster-assets.mdc`**
+- SVG 图标、viewBox trim、外框 vs 图形 → **`.cursor/rules/figma-svg-icons.mdc`**
+- 登入/註冊表單 Modal（Input 右槽、Checkbox、Close、Nuxt 接線）→ **`.cursor/rules/figma-auth-form.mdc`**
+- 项目结构、MCP 流程、检查清单 → **`.cursor/rules/figma-design-system.mdc`**
+
+## 1. 图片/元素翻转 180°
+
+- 必须读取 Figma 节点的 `rotation` / `transform` 属性（在 **`get_design_context`** 输出中搜 `rotate` / `scale`；`get_metadata` **无** rotation）。
+- 翻转 180° 必须生成 CSS：`transform: rotate(180deg);`
+- 禁止丢失任何旋转、翻转、缩放效果。
+- 勿用文件名猜方向 — 对照 Figma **node-id** 与 design context。
+
+## 2. 宽高/定位禁止百分比
+
+- 所有 `width` / `height` 强制使用设计稿原始固定 `px`（本專案 rem 轉換規則見 `CLAUDE.md` 的 `Px` / `PX` 豁免）。
+- 所有 `top` / `left` / `right` / `bottom` 强制使用固定 `px`。
+- 禁止解析 Constraints 百分比；禁止 `%`、`vh`、`vw`、`auto`（佈局還原場景）。
+- 必须与设计稿像素完全一致。
+
+## 3. 背景图片
+
+- 必须强制解析 Figma `fill`、`background-fill`、shape 背景。
+- 必须生成 `background-image: url(...)`。
+- 禁止忽略任何背景图、渐变背景、填充图层。
+
+## 4. 文字描边
+
+- 必须读取 Figma 文字 `stroke` 信息。
+- 必须生成标准 CSS：`-webkit-text-stroke: <宽度> <颜色>;`
+- 确保描边完全生效。
+
+## 5. 渐变填充线 / 装饰分割线（divider）
+
+Figma 里 **1px 高 Frame + Linear gradient fill**（侧栏社媒分隔线、金色装饰线等）与 **渐变描边**（§5b）不是同一类，禁止混用写法。
+
+### 必须
+
+1. 在 `get_design_context` 中读取该线的 **gradient angle** 与 **color stops**（含 0% / 50% / 100% 位置），对照 `get_screenshot` 目视。
+2. 用 `background: linear-gradient(<angle>, …)` 写在宿主（`height: 1px` 的 `i` / `div`），**禁止**用 `border` 表达渐变 fill。
+3. **对称「两侧浅、中间深」**（Figma 两端透明/浅色、中间 `#F9BB22` 等）： stops 必须左右镜像，例如  
+   `transparent 0%, var(--gold8-accent) 50%, transparent 100%`（角度以稿面为准，常见 `90deg`）。
+4. 品牌色渐变优先落 token（如 `_tokens-gold8.scss` 的 `--gold8-social-divider`），组件只引用变量。
+5. 边缘变淡只靠 **gradient stops**，**禁止**对整条线加 `opacity` 冒充「两侧变浅」。
+
+### 禁止（常见误实现）
+
+| 禁止 | 原因 |
+|------|------|
+| `linear-gradient(90deg, accent 0%, transparent 100%)` 用于对称装饰线 | 只有一侧有色，视觉成「左深右浅」，与稿面相反 |
+| 未读 Figma stops 就套「左→右淡出」模板 | 装饰线经常是 **中心峰值**，不是单向淡出 |
+| 整条 `opacity: 0.5` | 均匀变淡，不会产生中间亮、两侧暗 |
+| 用 `border-image` / 纯色 `border` 代替渐变 fill | 与 Figma fill 类型不一致 |
+
+### 验收
+
+- 截图中线的 **最亮段在几何中心**（或 Figma 标注的 stop 位置），两侧对称变淡。
+- DevTools 中 `background` 的 stop 顺序与 Figma 一致（勿颠倒起止色）。
+
+## 5b. 渐变边框（描边）
+
+- 禁止错误语法：`border: 3px solid gradient`。
+- 禁止使用双层 div 宽高放大 2px（圆角会视觉变粗）。
+- 唯一标准方案（伪元素 + mask 等宽渐变边框）：
+
+```css
+.selector {
+  position: relative;
+  border-radius: /* 设计稿圆角 */;
+}
+.selector::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: /* 设计稿圆角 */;
+  background: /* 设计稿渐变 */;
+  padding: 2px; /* 边框宽度，与设计稿一致 */
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+```
+
+## 6. 图片本地化
+
+- **位图**下载到 `app/assets/imgs/<子目录>/`（子目录划分见 **`figma-design-system.mdc`**），在组件中 `import` / `url('~/assets/imgs/...')` 引用。
+- **禁止**位图落在 `imgs/` 根目录；**禁止**与图标混放。
+- 禁止把 Figma MCP URL、在线链接、`base64` 写入生产代码。
+- 拉取后：`pnpm assets:download`；提交前 **`pnpm assets:verify:raster`**。
+- 位图须 **2× 像素密度**；复杂裁切背景优先对背景图层组 `get_screenshot`（`contentsOnly: true`）。
+- **完整流程、空白图排查、命令表** → **`figma-raster-assets.mdc`**。
+
+## 7. ICON 导出
+
+- **全部** Figma SVG 图标落盘 **`app/assets/icons/`**（扁平）；禁止放入 `imgs/`。
+- UI 图标仅独立 `.svg`；禁止用位图当 UI 图标。
+- 页面用 **nuxt-svgo**（`<svgo-*>`，檔名對應 `app/assets/icons/*.svg`）。
+- viewBox 留白、trim → **`figma-svg-icons.mdc`**。
+
+## 8. 裁切图片
+
+- 优先 §6 的图层尺寸 **2×** `get_screenshot` 导出；仅在无法导出时再读 Figma crop，用 `object-fit` / `object-position` 还原。
+- 确保图片显示区域与设计稿完全一致。
+
+## 9. 轮播模块
+
+- 识别到小圆点（dots）、左右箭头 → 判定为轮播。
+- 必须使用 **SwiperJS**（本專案 `nuxt-swiper`），含 `pagination` + `navigation`。
+- 禁止写死模块；必须可滑动、可切换、可点击。

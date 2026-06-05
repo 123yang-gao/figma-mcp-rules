@@ -1,0 +1,177 @@
+---
+description: Figma 登入/註冊與表單 Modal 還原 — 禁止搬舊 Form API、Input 右槽、Checkbox/Close 圖標、Nuxt 自動匯入
+globs:
+  - app/components/Form/Mega*.vue
+  - app/components/Auth/Mega*.vue
+  - app/pages/@auth/**
+  - app/components/Form/*Auth*.vue
+alwaysApply: false
+---
+
+# Figma 表單 / Auth Modal 還原（強制）
+
+適用：**登入、註冊、忘記密碼**等含 `Input Field`、`Check Box`、`Modal Title Header` 的 Figma 屏。與 **`project-conventions.mdc`** §2（新建獨立元件）、§3（Icon 從 Figma 導出）並讀；衝突時本文件在**表單互動細節**上優先。
+
+入口流程仍走 **`figma-implement-design`** + **`figma-design-system.mdc`**。
+
+---
+
+## 0. 設計稿清單制（最高優先 — 防「多出設計沒有的東西」）
+
+**原則：Figma 當前屏/當前 Tab 的節點樹裡有什麼，DOM 裡就只能有什麼。**  
+業務 API（`sessionStore`、`useSms`）可接在既有欄位背後，**不得**為了「舊版有、後端需要」在畫面上多加控件。
+
+### 0.1 實作前：寫《設計清單》（未寫清單禁止寫 template）
+
+對**本任務對應的 Figma 根 node**（如 Login Modal `28002:92499`、Register Modal `28002:92368`）：
+
+1. `get_design_context`（過大則 `get_metadata` 再分子節點拉取）。
+2. **每個可見分頁/狀態各做一份清單**（例：Username Login 與 SMS Login 是兩份，不可混用）。
+3. 清單欄位（寫在 PR 描述或實作註解，Agent 至少心算並逐項勾選）：
+
+| 類型 | 記錄內容 |
+|------|----------|
+| 文案 | Label / 按鈕 / 連結的**字面**（無 Key 則硬編碼，見 `project-conventions.mdc`） |
+| 輸入 | 每個 `Input Field` 的 label、placeholder、**Right 是否空** |
+| 勾選 | 每個 `Check Box` 的文案行數、`items-center`/`items-start` |
+| 操作 | `Buttons`、`Switch Menu` 選項文案 |
+| 圖標/位圖 | 關閉鈕、勾選態、Pagcor、Banner 等**節點名** |
+| **明確沒有** | 設計樹中不存在的項（寫「無」） |
+
+**《設計清單》範例（megaphps2 登入 · Username Login）：**
+
+- 有：WELCOME、Switch Menu（Username Login / SMS Login）、Username、Password、Keep me logged in、Forgot password?、Login、Check Box ×2、Pagcor 區、底部連結  
+- **無**：國碼下拉、`CountryCode`、`WithLoginItem`、密碼眼睛、`show-eye`、第三方登入列、驗證碼（除非 Figma 該態有）
+
+### 0.2 實作中：白名單掛載
+
+- Template **只允許**掛載清單中的區塊；新增一行 DOM 前須能對應 Figma **node 名或截圖區塊**。
+- **禁止**為了接 API 而引入設計沒有的 UI：
+  - 例：`CountryCode` / `country-code-wrapper`（設計無國碼下拉 → 國碼僅在 script 用 `commonStore.countryDialingCode`，不出現在畫面）
+  - 例：`FormInput`、`LoginItem`、`WithLoginItem`、`FormBanner`（舊殼，非本屏 Figma）
+- **禁止**「舊版有就順手加上」：舊元件、舊路由頁、商戶開關打開的控件，**均不算**設計依據。
+
+### 0.3 實作後：差集檢查（宣告完成前必做）
+
+1. 對當前屏 `get_screenshot`，逐區對照 running UI。
+2. 在**本任務新建/修改的 `.vue`** 內 grep，不得出現設計清單「明確沒有」的掛載：
+
+```text
+CountryCode|WithLoginItem|FormBanner|FormInput|FormCheckbox|show-eye|showEye|svgo-app-close|svgo-eye
+```
+
+（若 Figma **該屏**確有對應圖層，從清單「明確沒有」中刪除並註明 node id。）
+
+3. 切換 **Switch Menu 每個 Tab** 各對照一次子樹；不得把 A Tab 的欄位留在 B Tab。
+
+### 0.4 與「業務邏輯」的邊界
+
+| 允許 | 禁止 |
+|------|------|
+| 清單內欄位綁 `v-model`、submit 呼叫 `normalLogin` / `sendLoginOtp` | 清單外多一個下拉/按鈕/區塊 |
+| 設計無文案處用硬編碼（不新增 i18n Key） | 用 `$t` 賭 Key，或為缺失文案自創控件 |
+| 設計無 OTP 欄時，SMS 流程在後端/第二步再說（需產品確認） | 未在 Figma 出現的 Verification Code 欄（除非該 Tab context 有） |
+
+---
+
+## 1. 禁止（常見錯誤來源）
+
+### 1.1 禁止無腦搬舊元件 API（見 §0 清單制）
+
+- **禁止**因「舊版有」而從 `FormInput`、`FormCheckbox`、`LoginItem`、`SignupItem`、`CountryCode`、`WithLoginItem`、`FormBanner` 複製 props/行為或**掛進 template**，例如：
+  - `show-eye` / `showEye`（密碼顯示切換）
+  - `styleN` / `variant` 覆蓋樣式
+  - 存量 `svgo-app-close`、`svgo-eye-open` 等圖標
+- **允許**復用**業務邏輯**（`sessionStore.normalLogin`、`useSms`、`vee-validate` 規則），但**視覺與 DOM 結構**必須對照當前 Figma 節點。
+
+### 1.2 禁止 Input 右槽臆造圖標
+
+- Figma `Input Field` 內 **`Right` 為空占位**（如 `size-[18px]` 無子圖層）→ **不得**加眼睛、清除、下拉箭頭等。
+- 僅當 `get_design_context` 在 `Right` 內有明確 Vector/Icon 實例時，才導出 SVG 並實作。
+
+### 1.3 禁止手畫勾選態
+
+- Figma `Check Box` 在 **checked** 態若為獨立圖層或 MCP 提供 `imgCheckBox` / 完整 SVG：
+  - **必須**導出至 `app/assets/icons/`（如 `auth-checkbox-checked.svg`）
+  - 使用 `<svgo-*>`，**禁止**用 `::after` + `border` 手畫勾號代替。
+- 未選中態：圓形描邊尺寸、色值以 Figma 為準（常見 `16px`、`2px`、`--brand-primary-yellow`）。
+
+### 1.4 禁止錯用關閉圖標
+
+- Modal 關閉鈕必須對應設計中的 **`Modal Title Header` → `Close Button` / `Flat Icon / System / Close`**（圓圈 + X），**禁止**預設 `svgo-app-close`（僅 X、無圓圈）。
+- 導出為獨立 SVG（如 `modal-title-close.svg`）；外框點擊區與內層圖形尺寸分開（見 **`figma-svg-icons.mdc`** § 外框 vs 圖形）。
+- **頁面必須** `<svgo-modal-title-close filled … />`（stroke 描邊圖，見 **`figma-svg-icons.mdc`** § nuxt-svgo 与 stroke）；禁止只改 SVG 不傳 `filled`——源文件正確仍可能「只剩空圈、叉消失」。
+
+### 1.5 禁止 Checkbox 行預設頂對齊
+
+- Figma 多為 `flex … items-center` + `gap-[4px]`。
+- **禁止**在未讀設計的情況下使用 `align-items: flex-start` 或 `margin-top` 把圓點「對齊首行」。
+- 多行文案時仍以 Figma 該 `Check Box` 實例的 `items-*` 為準（megaphps2 登入條款為 **center**）。
+
+---
+
+## 2. 實作前必做（MCP 稽核清單）
+
+對**當前 Modal 根節點**（如 `28002:92499` Login Modal）執行 `get_design_context`；過大則 `get_metadata` 後對子節點分別拉取。
+
+| 區塊 | 在 context 中確認 | 實作要求 |
+|------|-------------------|----------|
+| 每個 `Input Field` | Label 文案、`Input` 圓角/邊框、`Right` 是否為空 | 空 Right → 無右側圖標 |
+| `Check Box` | `items-center` / `items-start`；checked 是否有獨立圖 | 佈局與勾選資源一致 |
+| `Modal Title Header` | `Close Button` 節點 id、圖形約 `16px` | 專用 svgo，非 app-close |
+| `Switch Menu` | 激活態背景/字色、高度 `24px` 等 | 獨立元件或 scoped 樣式，不改公共 Tab |
+| 主按鈕 | `Buttons` 漸層、`BTN-MD 14` 字重 | 優先 `AppButton` + token，視覺不符再 feature 內覆蓋 |
+
+完成後保留 **`get_screenshot`** 同一 `nodeId` 作驗收基準。
+
+---
+
+## 3. Nuxt 頁面與元件接線（強制）
+
+子目錄元件自動匯入會帶**路徑前綴**：
+
+| 檔案路徑 | Template 中應使用的名稱 |
+|----------|-------------------------|
+| `components/Auth/MegaAuthModal.vue` | `AuthMegaAuthModal` |
+| `components/Form/MegaLoginItem.vue` | `FormMegaLoginItem` |
+| `components/Form/MegaSignupItem.vue` | `FormMegaSignupItem` |
+| `components/Form/MegaAuthInput.vue` | `FormMegaAuthInput` |
+
+- `app/pages/@auth/*.vue` **禁止**寫未解析的名稱（如裸写 `MegaAuthModal`）。
+- 不確定時：對照同目錄已生效頁面（如 `@auth/forgot.vue` 的 `AuthModal` + `FormForgotItem`），或頁內 **顯式 import**。
+
+Modal 路由：`pages/login.vue` 為背景占位；實際 UI 在 `pages/@auth/login.vue`，且 `app.vue` 中須有 `<PlusModalPage name="auth" />`。
+
+---
+
+## 4. 元件命名與目錄
+
+- 與舊 `LoginItem` / `FormInput` **視覺不一致**的 Figma 屏 → 使用 **`Mega*`** 或 feature 前綴**新建** `.vue`（見 **`project-conventions.mdc`** §2）。
+- **禁止**為湊 megaphps2 設計去改 `FormInput.vue`、`FormCheckbox.vue` 的默認樣式或新增 `styleN`。
+
+---
+
+## 5. 完成前驗收（Agent DoD 增項）
+
+在 **`lint-rule.mdc`** 的 `pnpm lint` 之前/之後，必須自檢：
+
+- [ ] **§0** 已按當前屏/Tab 寫設計清單，且 UI 無清單外控件（含 `CountryCode` 等存量元件）
+- [ ] **§0.3** grep 未命中清單「明確沒有」的 template 掛載
+- [ ] 每個密碼欄：對照 Figma 確認 `Right` 無圖 → 頁面無眼睛圖標
+- [ ] 每個 `Check Box` 行：單行/多行文案與圓點 **垂直關係** 與 screenshot 一致
+- [ ] 勾選前/後：使用 Figma 導出 SVG，勾號**視覺居中**
+- [ ] 關閉鈕：圓圈 + X，`<svgo-modal-title-close filled />`，尺寸與 header 對齊，非舊版 app-close
+- [ ] `@auth` 頁面元件名稱已解析（無 Vue warn `Failed to resolve component`）
+- [ ] 新增/變更 SVG → 仅 trim **该任务文件**（`icons:trim:manifest` 或 `node scripts/trim-svg-icons.mjs <file>.svg`）；**禁止** Figma 单屏任务跑全库 `pnpm icons:trim`（见 **`figma-svg-icons.mdc`** §任务范围限制）
+- [ ] 與 **`get_screenshot`** 並排對照通過後再宣佈完成
+
+---
+
+## 6. 與其他規則的關係
+
+| 主題 | 本文件 | 其他 |
+|------|--------|------|
+| 新建元件 vs 改公共組件 | §1、§4 | `project-conventions.mdc` §2 |
+| Icon 導出 / trim | §1.3–1.4 | `figma-svg-icons.mdc`、`project-conventions.mdc` §3 |
+| 像素 / 漸變邊框 | — | `figma-pixel-perfect.mdc` |
+| MCP 總流程 | §2 | `figma-design-system.mdc`、`figma-implement-design` |

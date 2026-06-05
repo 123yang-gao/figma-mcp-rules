@@ -1,0 +1,8 @@
+{
+  "assets:download": "node scripts/download-figma-assets.mjs && node scripts/trim-svg-icons.mjs --manifest",
+  "assets:verify": "node scripts/verify-raster-assets.mjs && node scripts/verify-svg-icons.mjs",
+  "assets:verify:raster": "node scripts/verify-raster-assets.mjs",
+  "icons:trim": "node scripts/trim-svg-icons.mjs",
+  "icons:trim:manifest": "node scripts/trim-svg-icons.mjs --manifest",
+  "icons:verify": "node scripts/verify-svg-icons.mjs"
+}

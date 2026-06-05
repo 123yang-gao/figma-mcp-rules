@@ -1,0 +1,33 @@
+{
+  "name": "figma-mcp-rules",
+  "version": "1.0.0",
+  "description": "Cursor rules, skills, and scripts for Figma MCP design-to-code workflow",
+  "type": "module",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/123yang-gao/figma-mcp-rules.git"
+  },
+  "bin": {
+    "figma-mcp-install": "./install.mjs"
+  },
+  "files": [
+    ".cursor",
+    "scripts",
+    "docs",
+    "templates",
+    "install.mjs",
+    "README.md"
+  ],
+  "scripts": {
+    "install:project": "node install.mjs"
+  },
+  "keywords": [
+    "figma",
+    "cursor",
+    "mcp",
+    "design-to-code",
+    "nuxt"
+  ],
+  "license": "MIT"
+}

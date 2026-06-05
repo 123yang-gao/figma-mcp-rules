@@ -1,0 +1,91 @@
+---
+description: 專案核心慣例 — i18n 文案、組件復用、Icon 資源（megaphps2）
+alwaysApply: true
+---
+
+# 專案核心慣例 — sweepstakes-shell
+
+## 1. 文案 i18n 規範
+
+### 優先順序
+
+1. **已有、已在需求中規範定義的 Key** → 使用 `$t('key')` / `useI18n()`。
+2. **無對應國際化 Key** → **優先硬編碼寫死文案**（template 直接寫字串，或 `const LABEL = '...'` 常數）。
+3. **需正式納入多語系** → 統一走**需求評審 + 批量配置**（Google Sheets → `pnpm i18n` 同步），Agent **不得**自行新增词条。
+
+### 禁止
+
+- 禁止為「暫時沒有 Key」而**臨時新增** i18n 词条（含手改 `i18n/locales/`、自創 `$t('keep_me_logged_in')` 等未评审 Key）。
+- 禁止**隨意自定義**或**取用未在需求/詞庫中規範定義**的 Key（即使 locale 檔碰巧存在、但非本品牌/本需求正式 Key，亦不可擅自使用）。
+- 禁止用 `$t('unknown_key')` 賭 Key 是否存在。
+
+### 示例
+
+```vue
+<!-- ✅ 已有正式 Key -->
+<button>{{ $t('login') }}</button>
+
+<!-- ✅ 無 Key，硬编码 -->
+<label>Keep me logged in</label>
+
+<!-- ❌ 自创临时 Key -->
+<label>{{ $t('keep_me_logged_in') }}</label>
+```
+
+---
+
+## 2. 組件復用規範
+
+### 原則
+
+- **優先**復用現有成熟公共組件（`app/components/` 下已有元件、Form 系列、AppButton 等）。
+- 只要與設計稿/需求在**視覺或交互上存在任意細節差異**，**不得**改動原有組件以「兼容」新場景（不加 variant、不 patch 存量樣式、不擴展 props 去覆蓋舊行為）。
+
+### 必須新建獨立組件
+
+- 差異場景 → 在對應 feature 目錄**新建獨立 `.vue`**（如 `Form/LoginItem.vue` 專用樣式，而非改 `FormInput.vue` 的 `style3` 污染其他頁面——若已污染，新需求應抽離為獨立 wrapper/子組件）。
+- 新組件可**組合**公共組件，但不可讓公共組件承載只有某一屏才需要的樣式/邏輯。
+
+### 禁止
+
+- 禁止為單一頁面/Modal 在 `FormInput`、`FormCheckbox`、`BaseModal` 等公共組件上堆叠 `styleN` / `variant` 以湊設計稿。
+- 禁止「順手」重構存量組件 API 影響其他路由。
+- 禁止從舊 `FormInput` / `LoginItem` **照搬 props**（如 `show-eye`）實作新 Figma 表單；見 **`figma-auth-form.mdc`**。
+
+### Figma 登入/註冊/表單 Modal
+
+實作 `app/pages/@auth/**` 或 `Form/Mega*.vue`、`Auth/Mega*.vue` 時，**必須**同時遵守 **`figma-auth-form.mdc`**（Input 右槽、Checkbox 對齊、勾選/關閉圖標、Nuxt 元件全名）。
+
+---
+
+## 3. Icon 資源規範
+
+### 原則
+
+- UI 圖標落盤 **`app/assets/icons/`**（扁平 `.svg`），頁面使用 **nuxt-svgo**（`<svgo-*>`）。
+- **Flat Icon / 侧栏导航（24×24）**：须按 **`figma-svg-icons.mdc`** § **Flat Icon — Dev Mode 等价导出**（`compose-figma-flat-icon.mjs` 或 Figma Export SVG）；**禁止** trim 合并件、禁止 per-icon glyph 二次缩放。
+- 其他 icon 的 trim/verify 见 **`figma-svg-icons.mdc`**。
+- 設計稿出現**老項目存量圖標庫不存在**的圖標 → **一律依最新 Figma 重新切圖導出**，寫入 `app/assets/icons/`。
+
+### 禁止
+
+- **禁止**復用舊版非標圖標（歷史 `imgs/` 位圖當 icon、過期命名 SVG、其他品牌/分支拷貝的圖標）。
+- **禁止**用 CSS `scale` 或相近圖標「代替」設計稿指定圖形。
+- **禁止**在代码中保留 Figma MCP 临时 URL 作为 `src`。
+
+### 流程
+
+1. Figma MCP `get_design_context` / `get_screenshot` 取得資源。
+2. `pnpm assets:download`（**仅登记本任务清单**，见 **`figma-svg-icons.mdc`** §任务范围限制）或 **`compose-figma-flat-icon.mjs`** / Figma Export SVG（Flat Icon）；位图按 **`figma-raster-assets.mdc`**。
+3. trim **仅本次/指定** SVG（**非**已合并的 24×24 Flat Icon）→ `pnpm icons:verify`。
+
+---
+
+## 與其他規則的關係
+
+| 主題 | 本文件 | 專項規則 |
+|------|--------|----------|
+| i18n 硬编码 vs Key | §1 | `CLAUDE.md` 多語系（以本文件為準） |
+| 組件目錄與 Figma 流程 | §2 | `figma-design-system.mdc` |
+| 表單/Auth 還原（Input/Checkbox/Close） | — | **`figma-auth-form.mdc`** |
+| SVG trim / viewBox | §3 | `figma-svg-icons.mdc` |

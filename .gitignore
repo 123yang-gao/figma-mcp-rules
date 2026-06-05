@@ -1,0 +1,5 @@
+node_modules/
+scripts/.download-manifest.json
+scripts/credentials.json
+scripts/token.json
+.DS_Store

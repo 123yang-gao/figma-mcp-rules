@@ -1,0 +1,9 @@
+## Figma 設計還原
+
+完整說明見 **[docs/figma-cursor-setup.md](docs/figma-cursor-setup.md)**（或 submodule `vendor/figma-mcp-rules/docs/figma-cursor-setup.md`）。
+
+- **Rules**：`.cursor/rules/figma-*.mdc`、`project-conventions.mdc`
+- **Skills**：`.cursor/skills/figma-implement-design/`、`figma-create-design-system-rules/`
+- **MCP**：`.cursor/mcp.json` → Figma（`https://mcp.figma.com/mcp`）
+- **資源路徑**：Figma **SVG 圖標** → `app/assets/icons/`；**位圖** → `app/assets/imgs/<子目錄>/`
+- **資源指令**：`pnpm icons:trim:manifest`、`pnpm icons:verify`、`pnpm assets:download`

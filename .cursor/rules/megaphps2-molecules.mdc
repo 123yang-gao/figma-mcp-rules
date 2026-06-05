@@ -1,0 +1,158 @@
+---
+description: megaphps2 MOLECULES 互動規格（Figma 26291-49389）— 按鈕/表單/篩選等狀態與程式對照，後續頁面按鈕互動須從此取用
+globs:
+  - app/components/**/*.vue
+  - app/pages/**/*.vue
+  - app/assets/css/**
+alwaysApply: false
+---
+
+# megaphps2 MOLECULES — 互動規格索引
+
+**Figma 來源（單一真相）：**  
+[MOLECULES `26291-49389`](https://www.figma.com/design/td8H13FGfHO9hGDxVPooVw/megaphps2?node-id=26291-49389&m=dev)
+
+**ATOMS（色彩/字型 token）：** [`26291-47998`](https://www.figma.com/design/td8H13FGfHO9hGDxVPooVw/megaphps2?node-id=26291-47998&m=dev) → `app/assets/css/_tokens-megaphp.scss`
+
+實作新頁面、新按鈕、可點擊控件前：**先查本表**，選對應元件/ mixin / variant，禁止自創漸層或狀態樣式。
+
+---
+
+## 1. MOLECULES 區塊一覽（Figma 子節點）
+
+| Section | Figma node（區段內） | 狀態維度 | 程式對照（優先） |
+|---------|---------------------|----------|------------------|
+| **BUTTONS** | `26291:49390` | Default / Hover / **Active** / Disabled；LG·MD·SM·XS；黃/紅/Ghost 白/黑；icon-only | **`AppButton`**、`fill-btn-1` / `fill-btn-2` / `border-btn` |
+| Close Button | `26291:49872` | Default / Hover；Dark BG | Auth Modal 關閉 SVG → **`figma-auth-form.mdc`** |
+| Filter Button | `26291:49913` | Default / Hover / **Selected**；SM·MD·LG | 待建 `AppFilterButton`；暫用選中態 = 黃漸層 pill |
+| Product Switch | `26291:49986` | Default / Hover / **Selected**；Mobile·Desktop | 分類切換、遊戲 Tab |
+| Wallet Buttons | `26291:50036` | Default / Hover / **Selected**；Small·Large | 側欄 Deposit / Withdraw pill |
+| Payment Channels / Buttons | `26291:50049`–`50101` | Default / Hover / Selected / Disabled；Flat·V2 | `/buy`、支付選擇 |
+| **INPUT FIELD** | `26291:50138` | Default / Focus / Filled / Hover / Error / Success / Disabled；Large·Light | **`Form/MegaAuthInput`** → **`figma-auth-form.mdc`** |
+| Search | `26291:50325` | Default / Active；Mobile·Desktop | `SideMenu` 搜尋列、`/search` |
+| **FORMS** | `26291:50355` | Check Box、Radio、Modal Switches | **`Form/MegaAuthCheckbox`**、Auth Switch Menu |
+| **MESSAGES** | `26291:50454` | Snackbar Success/Error/Warning/Info；有/無按鈕 | `CustomToast`、Vant Toast |
+| Marquees / Tooltip | 同區 | Mobile·Desktop | `Notice`、tooltip 樣式 |
+| **SECTIONS** | `26291:50555` | Section Header、Page Titles | `HomeMegaHomeSectionHeader` |
+| **DROPDOWN** | `26291:50609` | SM·MD·LG；Default / Hover / Active / Disabled | 下拉、語言（若改為 dropdown） |
+| **MODAL TITLE HEADER** | `26291:50808` | Mobile·Desktop；有/無 Back | **`Auth/MegaAuthModal`** |
+| **ACCORDION** | `26291:50837` | Default / Hover / Active；Grey | Help、FAQ 折疊 |
+
+---
+
+## 2. 標準按鈕（BUTTONS）— 必用 `AppButton`
+
+### Props
+
+| Prop | 值 | Figma 對應 |
+|------|-----|------------|
+| `size` | `lg` `md` `sm` `xs` | 高度 48 / 40 / 32 / 24 px |
+| `variant` | `primary-yellow` | Primary - Yellow |
+| | `primary-red` | Primary - Red |
+| | `ghost-white` | Ghost - White |
+| | `ghost-black` | Ghost - Black |
+| `disabled` | `true` | State=Disabled → `opacity: var(--control-disabled-opacity)`（0.3） |
+| `iconOnly` | `true` | Only icon=Yes |
+
+### CSS 狀態（`AppButton.vue` + `_mixins.scss`）
+
+| 狀態 | Primary 黃/紅 | Ghost 白/黑 |
+|------|---------------|-------------|
+| Default | `var(--trim-gradient-yellow)` / `var(--trim-gradient-red)` | 半透明底 + `border: 1px solid var(--base-70)` |
+| Hover | `filter: brightness(1.06)` | 背景加深 |
+| **Active**（`:active` 按下） | `filter: brightness(0.94)` | 背景再加深一檔 |
+| Disabled | `opacity: 0.3`；`cursor: not-allowed` | 同左 |
+
+### 範例
+
+```vue
+<AppButton size="md" variant="primary-red" label="Register" @click="onRegister" />
+<AppButton size="sm" variant="primary-yellow" native-type="submit" :label="btnName" :disabled="loading" />
+```
+
+**禁止：** 新頁面為湊設計再寫一套 `border-radius: 40px` + 自訂漸層按鈕 class。
+
+---
+
+## 3. 選中態（Selected / Active 語意）
+
+Figma 中 **Active** 在按鈕矩陣 = **按下瞬間**；在 Filter / Wallet / Tab = **已選中**。
+
+| 場景 | Figma 狀態名 | 實作方式 |
+|------|-------------|----------|
+| 按鈕按下 | State=**Active** | CSS `:active`（見 §2） |
+| 導航當前項 | Selected / 路由 active | 文字 `var(--brand-primary-yellow)` + 圖標同色（如 `sidebar_nav_item_active`） |
+| 語言 pill | Selected | `sidebar_lang_btn_active` → 黃漸層 + `lang_check` |
+| 篩選 chip | Selected | 黃漸層底（對照 Filter Button Selected） |
+| 表單 Tab | State=Active（Modal Switches） | 底線或 pill 高亮（Auth Switch Menu） |
+
+---
+
+## 4. 已落地頁面級互動（功能不變，僅 UI）
+
+後續頁面按鈕/連結應**複用相同模式**，勿重複發明路由或 API。
+
+### 頂欄 `HomeHeader.vue`
+
+| 控件 | 互動 | 路由 / 行為 |
+|------|------|-------------|
+| 選單 | 桌面：`toggleSideMenuCollapsed`；行動：開關 overlay 側欄 | `uiStore` |
+| Logo | `NuxtLink` `/` | — |
+| Register | `PlusModalLink` `/register` | 未登入 |
+| Login | `PlusModalLink` `/login` | 未登入 |
+| 餘額 | `PlusModalLink` `/buy` | 已登入 + `allowDeposit` |
+
+樣式：Register = **primary-red**；Login = **primary-yellow**（對應 MOLECULES）。
+
+### 側欄 `SideMenu.vue`
+
+| 控件 | 互動 | 備註 |
+|------|------|------|
+| 關閉 | 僅行動版 | `hideSideMenu` |
+| 外點 | 僅行動版 | `onClickOutside` |
+| Register / Login | `PlusModalLink` + `closeIfMobile` | SM 尺寸漸層按鈕 |
+| 搜尋 | `/search` | Ghost 搜尋列 |
+| 導航項 | `router.push` 或 `openCs` / 登出 dialog | 桌面不關側欄 |
+| 語言 | `setLocale` + `reload` | English / Tagalog pill |
+| 餘額刷新 | `accountStore.getAllBalance` | 旋轉 icon |
+| Copy ID | `clipboard` | — |
+| Deposit / Withdraw / Redeem | `PlusModalLink` | 權限 gate |
+
+收起態：`28002:96997` → 寬 72px，僅圖標。
+
+### 首頁內容 `Home/MegaHome*.vue`（不動 header/sidebar）
+
+| 控件 | 互動 |
+|------|------|
+| Welcome Banner | `openLinkage`（有 linkage 時可點） |
+| 分類列 | `games-gameCategory` 路由 |
+| View All | 各區 `goGames(category)` |
+| 遊戲格 | `launchGame`；收藏 `addFavGame` / `removeFavGame` |
+| 廠商列 | `goProvider` → rng 列表 |
+
+### 頁腳 `HomeFooter.vue`
+
+| 控件 | 互動 |
+|------|------|
+| 外鏈 | `target="_blank"` 三個支援網址 |
+
+---
+
+## 5. 與其他規則的關係
+
+| 主題 | 本文件 | 專項 |
+|------|--------|------|
+| 按鈕元件 API | §2 | `AppButton.vue`、`app/types/app-button.ts` |
+| 登入表單 Input/Checkbox/Close | §1 INPUT/FORMS | **`figma-auth-form.mdc`** |
+| Token 色票 | § 開頭 | `_tokens-megaphp.scss` |
+| 新屏 Figma 實作流程 | — | **`figma-implement-design`** |
+
+---
+
+## 6. Agent 檢查清單（新按鈕 / 可點控件）
+
+- [ ] 已對照 MOLECULES 選 **size + variant**（或文檔 §4 既有模式）
+- [ ] 含 **hover + active + disabled**，非僅 default
+- [ ] Disabled 使用 **`--control-disabled-opacity`**，非隨意 `0.5`
+- [ ] 未登入提示、權限、Modal 路由與**現有頁面**一致
+- [ ] 需正式 i18n Key 時走評審；無 Key 則硬編碼（**`project-conventions.mdc`**）

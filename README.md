@@ -13,6 +13,8 @@
 | `.cursor/mcp.json` | Figma MCP 配置模板 |
 | `scripts/` | 资源下载、SVG trim/verify、位图 verify、Flat Icon 合并库 |
 | `docs/figma-cursor-setup.md` | 文件清单与 `pnpm` 命令说明 |
+| `docs/figma-naming-guide.md` | Figma 图层命名规范（设计师 ↔ 代码映射） |
+| `docs/project-features.md` | sweepstakes-shell 功能全景（UI 重构参考） |
 | `templates/` | `package.json` 脚本片段、`CLAUDE.md` 引用片段 |
 
 ### Rules
@@ -31,6 +33,7 @@
 - `figma-implement-design` — Figma → Vue 完整流程（**日常必用**）
 - `figma-create-design-system-rules` — 刷新 `figma-design-system.mdc`
 - `init-brand-branch` — 新品牌分支初始化（sweepstakes 专用，可选）
+- `ui-refactor` — sweepstakes-shell 页面 UI 重构工作流（含 `bindings.md` 绑定清单）
 
 ## 前置条件
 

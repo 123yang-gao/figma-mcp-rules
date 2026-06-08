@@ -9,7 +9,7 @@
 | 目录 | 说明 |
 |------|------|
 | `.cursor/rules/` | 8 条规则（Figma 专项 + 项目惯例 + lint DoD） |
-| `.cursor/skills/` | 3 个 Skill（implement-design、create-design-system-rules、init-brand-branch） |
+| `.cursor/skills/` | 4 个 Skill（implement-design、create-design-system-rules、init-brand-branch、ui-refactor） |
 | `.cursor/mcp.json` | Figma MCP 配置模板 |
 | `scripts/` | 资源下载、SVG trim/verify、位图 verify、Flat Icon 合并库 |
 | `docs/figma-cursor-setup.md` | 文件清单与 `pnpm` 命令说明 |

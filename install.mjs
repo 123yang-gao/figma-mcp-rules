@@ -225,25 +225,30 @@ function main() {
 
   console.log(`Skills (${skillDirs.length}):`)
   for (const dir of skillDirs) {
-    const srcSkill = path.join(sourceRoot, '.cursor', 'skills', dir.name, 'SKILL.md')
+    const srcSkillDir = path.join(sourceRoot, '.cursor', 'skills', dir.name)
     const dstSkillDir = path.join(targetRoot, '.cursor', 'skills', dir.name)
-    const dstSkill = path.join(dstSkillDir, 'SKILL.md')
-    if (!fs.existsSync(srcSkill)) {
-      continue
+    const skillFiles = linkOrCopyDirEntries(srcSkillDir, dstSkillDir, opts.copy)
+    for (const r of skillFiles) {
+      console.log(`  .cursor/skills/${dir.name}/${r.file}: ${r.mode}`)
     }
-    const mode = linkOrCopy(srcSkill, dstSkill, opts.copy)
-    console.log(`  .cursor/skills/${dir.name}/SKILL.md: ${mode}`)
   }
 
   console.log('Scripts:')
   installScripts(sourceRoot, targetRoot, opts.copy)
 
-  const docsSrc = path.join(sourceRoot, 'docs', 'figma-cursor-setup.md')
-  const docsDst = path.join(targetRoot, 'docs', 'figma-cursor-setup.md')
-  if (fs.existsSync(docsSrc) && !fs.existsSync(docsDst)) {
-    ensureDir(path.dirname(docsDst))
-    const mode = linkOrCopy(docsSrc, docsDst, opts.copy)
-    console.log(`  docs/figma-cursor-setup.md: ${mode}`)
+  const docsToInstall = [
+    'figma-cursor-setup.md',
+    'figma-naming-guide.md',
+    'project-features.md',
+  ]
+  for (const docFile of docsToInstall) {
+    const docsSrc = path.join(sourceRoot, 'docs', docFile)
+    const docsDst = path.join(targetRoot, 'docs', docFile)
+    if (fs.existsSync(docsSrc) && !fs.existsSync(docsDst)) {
+      ensureDir(path.dirname(docsDst))
+      const mode = linkOrCopy(docsSrc, docsDst, opts.copy)
+      console.log(`  docs/${docFile}: ${mode}`)
+    }
   }
 
   if (opts.mergeMcp) {

@@ -6,10 +6,10 @@
 
 ```bash
 git submodule add https://github.com/123yang-gao/figma-mcp-rules.git vendor/figma-mcp-rules
-node vendor/figma-mcp-rules/install.mjs
+node vendor/figma-mcp-rules/install.mjs --with-agent-toolkit
 ```
 
-详见仓库根目录 `README.md`。
+详见仓库根目录 `README.md` 与 [docs/agent-skills-setup.md](agent-skills-setup.md)。
 
 ---
 
@@ -29,6 +29,7 @@ Agent 编辑 `app/**`、`app/assets/**` 时，Cursor 按 `globs` 自动加载对
 |------|------|
 | `project-conventions.mdc` | 全项目：i18n 文案、禁止改公共组件凑设计、Icon 须从 Figma 导出。 |
 | `figma-icon-export.mdc` | **alwaysApply**：父帧 `icon-*` 整帧 SVG 导出/合成；禁止子图层碎片。 |
+| `figma-page-restore-dod.mdc` | 页面还原 DoD：`pnpm dev` 无 error + 对照 screenshot 验收。 |
 | `figma-design-system.mdc` | 总说明：Figma MCP 怎么用、资源放哪、实现检查项、规则优先级。 |
 | `figma-pixel-perfect.mdc` | 还原约束：固定 px、旋转/翻转、背景与描边、渐变边框、Swiper、资源本地化。 |
 | `figma-raster-assets.mdc` | 位图：`imgs/<子目录>/`、2× 导出、`get_screenshot`、校验命令。 |
@@ -41,12 +42,34 @@ Agent 编辑 `app/**`、`app/assets/**` 时，Cursor 按 `globs` 自动加载对
 
 ## `.cursor/skills/`
 
+### Figma
+
 | 目录 | 作用 |
 |------|------|
 | `figma-implement-design/` | Figma → Vue 完整流程（**日常必用**）。 |
 | `figma-create-design-system-rules/` | 扫描仓库后更新 `figma-design-system.mdc`。 |
-| `ui-refactor/` | sweepstakes-shell 页面 UI 重构（含 `bindings.md`、Shell 尺寸、父帧 icon 流程）。 |
+| `ui-refactor/` | 页面 UI 重构（含 `bindings.md`、Shell 尺寸、父帧 icon 流程）。 |
 | `init-brand-branch/` | 新品牌分支初始化（sweepstakes 专用，可选）。 |
+
+### OpenSpec（内置）
+
+| 目录 | 作用 |
+|------|------|
+| `openspec-propose/` | `/opsx:propose` 提出变更 |
+| `openspec-apply-change/` | `/opsx:apply` 实施任务 |
+| `openspec-explore/` | `/opsx:explore` 探索讨论 |
+| `openspec-sync-specs/` | `/opsx:sync` 同步规格 |
+| `openspec-archive-change/` | `/opsx:archive` 归档变更 |
+
+### Superpowers / gstack（`agent-toolkit`）
+
+经 `install.mjs --with-agent-toolkit` 从 `vendor/superpowers`、`vendor/gstack` 链接。见 [agent-toolkit/README.md](../agent-toolkit/README.md)。
+
+---
+
+## `.cursor/commands/`
+
+OpenSpec slash 命令：`opsx-propose.md`、`opsx-apply.md` 等。
 
 ---
 
@@ -63,12 +86,6 @@ Agent 编辑 `app/**`、`app/assets/**` 时，Cursor 按 `globs` 自动加载对
 | `figma-screenshot-exports.json` | `get_screenshot` 登记配置（按项目填写）。 |
 | `download-sidebar-fishing.mjs` | Flat Icon 合并范例脚本。 |
 
-运行后可能生成（可不提交 git）：
-
-| 文件 | 作用 |
-|------|------|
-| `scripts/.download-manifest.json` | `pnpm assets:download` 记录。 |
-
 ---
 
 ## `package.json` 脚本（install 合并）
@@ -81,6 +98,9 @@ Agent 编辑 `app/**`、`app/assets/**` 时，Cursor 按 `globs` 自动加载对
 | `pnpm icons:verify` | `verify-svg-icons.mjs` |
 | `pnpm assets:verify:raster` | `verify-raster-assets.mjs` |
 | `pnpm assets:verify` | 位图 + SVG |
+| `pnpm agent:install` | `install.mjs --with-agent-toolkit` |
+| `pnpm agent:gstack:gen` | gstack Cursor skills 重新生成 |
+| `pnpm openspec:init` | OpenSpec CLI 初始化 |
 
 ---
 

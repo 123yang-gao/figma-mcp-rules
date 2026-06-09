@@ -4,12 +4,15 @@
  *
  * Usage:
  *   node install.mjs [--target=/path/to/project] [--copy] [--merge-package] [--merge-mcp]
+ *                    [--with-agent-toolkit] [--skip-agent-toolkit]
  *
- * Recommended: git submodule add https://github.com/123yang-gao/figma-mcp-rules.git vendor/figma-mcp-rules
- *              node vendor/figma-mcp-rules/install.mjs
+ * Recommended:
+ *   git submodule add https://github.com/123yang-gao/figma-mcp-rules.git vendor/figma-mcp-rules
+ *   node vendor/figma-mcp-rules/install.mjs --with-agent-toolkit
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -31,6 +34,8 @@ function parseArgs(argv) {
     copy: false,
     mergePackage: true,
     mergeMcp: true,
+    withAgentToolkit: false,
+    skipAgentToolkit: false,
   }
   for (const arg of argv) {
     if (arg === '--copy') {
@@ -39,17 +44,23 @@ function parseArgs(argv) {
       opts.mergePackage = false
     } else if (arg === '--no-merge-mcp') {
       opts.mergeMcp = false
+    } else if (arg === '--with-agent-toolkit') {
+      opts.withAgentToolkit = true
+    } else if (arg === '--skip-agent-toolkit') {
+      opts.skipAgentToolkit = true
     } else if (arg.startsWith('--target=')) {
       opts.target = path.resolve(arg.slice('--target='.length))
     } else if (arg === '--help' || arg === '-h') {
       console.log(`Usage: node install.mjs [options]
 
 Options:
-  --target=<dir>     Target project root (default: cwd)
-  --copy             Copy files instead of symlinks
-  --no-merge-package Skip merging package.json scripts
-  --no-merge-mcp     Skip merging .cursor/mcp.json
-  -h, --help         Show this help
+  --target=<dir>          Target project root (default: cwd)
+  --copy                  Copy files instead of symlinks
+  --no-merge-package      Skip merging package.json scripts
+  --no-merge-mcp          Skip merging .cursor/mcp.json
+  --with-agent-toolkit    Also run agent-toolkit/install.mjs (Superpowers/gstack)
+  --skip-agent-toolkit    Skip agent-toolkit even if bundled
+  -h, --help              Show this help
 `)
       process.exit(0)
     }
@@ -75,15 +86,28 @@ function removeIfExists(p) {
 function linkOrCopy(source, dest, copy) {
   ensureDir(path.dirname(dest))
   removeIfExists(dest)
+  const isDir = fs.statSync(source).isDirectory()
   if (copy) {
-    fs.copyFileSync(source, dest)
+    if (isDir) {
+      fs.cpSync(source, dest, { recursive: true })
+    } else {
+      fs.copyFileSync(source, dest)
+    }
     return 'copy'
   }
   try {
-    fs.symlinkSync(source, dest, process.platform === 'win32' ? 'file' : undefined)
+    if (isDir) {
+      fs.symlinkSync(source, dest, process.platform === 'win32' ? 'junction' : 'dir')
+    } else {
+      fs.symlinkSync(source, dest, process.platform === 'win32' ? 'file' : undefined)
+    }
     return 'link'
   } catch {
-    fs.copyFileSync(source, dest)
+    if (isDir) {
+      fs.cpSync(source, dest, { recursive: true })
+    } else {
+      fs.copyFileSync(source, dest)
+    }
     return 'copy (symlink failed)'
   }
 }
@@ -104,19 +128,21 @@ function linkOrCopyDirEntries(sourceDir, destDir, copy) {
   return results
 }
 
-function mergeJsonFile(targetPath, patchPath, mergeFn) {
-  if (!fs.existsSync(patchPath)) {
-    return { changed: false, reason: 'patch missing' }
+function linkOrCopySkillDir(sourceDir, destDir, copy) {
+  ensureDir(destDir)
+  const results = []
+  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
+    const src = path.join(sourceDir, entry.name)
+    const dst = path.join(destDir, entry.name)
+    if (entry.isDirectory()) {
+      const mode = linkOrCopy(src, dst, copy)
+      results.push({ file: entry.name, mode, kind: 'dir' })
+    } else if (entry.isFile()) {
+      const mode = linkOrCopy(src, dst, copy)
+      results.push({ file: entry.name, mode, kind: 'file' })
+    }
   }
-  const patch = JSON.parse(fs.readFileSync(patchPath, 'utf8'))
-  let base = {}
-  if (fs.existsSync(targetPath)) {
-    base = JSON.parse(fs.readFileSync(targetPath, 'utf8'))
-  }
-  const merged = mergeFn(base, patch)
-  ensureDir(path.dirname(targetPath))
-  fs.writeFileSync(targetPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8')
-  return { changed: true }
+  return results
 }
 
 function mergePackageScripts(targetRoot, sourceRoot) {
@@ -195,6 +221,56 @@ function installScripts(sourceRoot, targetRoot, copy) {
   }
 }
 
+function installCommands(sourceRoot, targetRoot, copy) {
+  const commandsSrc = path.join(sourceRoot, '.cursor', 'commands')
+  if (!fs.existsSync(commandsSrc)) {
+    return []
+  }
+  const commandsDest = path.join(targetRoot, '.cursor', 'commands')
+  ensureDir(commandsDest)
+  const results = []
+  for (const entry of fs.readdirSync(commandsSrc, { withFileTypes: true })) {
+    if (!entry.isFile()) continue
+    const src = path.join(commandsSrc, entry.name)
+    const dst = path.join(commandsDest, entry.name)
+    const mode = linkOrCopy(src, dst, copy)
+    results.push({ file: entry.name, mode })
+  }
+  return results
+}
+
+function installOpenspecConfig(sourceRoot, targetRoot, copy) {
+  const template = path.join(sourceRoot, 'openspec', 'templates', 'config.yaml')
+  const destDir = path.join(targetRoot, 'openspec')
+  const dest = path.join(destDir, 'config.yaml')
+  if (!fs.existsSync(template)) {
+    return null
+  }
+  if (fs.existsSync(dest)) {
+    console.log('  openspec/config.yaml: kept existing (not overwritten)')
+    return 'skipped'
+  }
+  ensureDir(destDir)
+  const mode = linkOrCopy(template, dest, copy)
+  return mode
+}
+
+function runAgentToolkit(sourceRoot, targetRoot, copy) {
+  const toolkitInstall = path.join(sourceRoot, 'agent-toolkit', 'install.mjs')
+  if (!fs.existsSync(toolkitInstall)) {
+    console.warn('  agent-toolkit: install.mjs not found')
+    return
+  }
+  console.log('')
+  console.log('Agent toolkit:')
+  const args = [toolkitInstall, `--target=${targetRoot}`, '--skip-openspec']
+  if (copy) args.push('--copy')
+  const result = spawnSync(process.execPath, args, { stdio: 'inherit' })
+  if (result.status !== 0) {
+    console.warn('  agent-toolkit install exited with non-zero status')
+  }
+}
+
 function main() {
   const opts = parseArgs(process.argv.slice(2))
   const sourceRoot = __dirname
@@ -227,10 +303,23 @@ function main() {
   for (const dir of skillDirs) {
     const srcSkillDir = path.join(sourceRoot, '.cursor', 'skills', dir.name)
     const dstSkillDir = path.join(targetRoot, '.cursor', 'skills', dir.name)
-    const skillFiles = linkOrCopyDirEntries(srcSkillDir, dstSkillDir, opts.copy)
+    const skillFiles = linkOrCopySkillDir(srcSkillDir, dstSkillDir, opts.copy)
     for (const r of skillFiles) {
       console.log(`  .cursor/skills/${dir.name}/${r.file}: ${r.mode}`)
     }
+  }
+
+  const commands = installCommands(sourceRoot, targetRoot, opts.copy)
+  if (commands.length > 0) {
+    console.log(`Commands (${commands.length}):`)
+    for (const r of commands) {
+      console.log(`  .cursor/commands/${r.file}: ${r.mode}`)
+    }
+  }
+
+  const openspecMode = installOpenspecConfig(sourceRoot, targetRoot, opts.copy)
+  if (openspecMode) {
+    console.log(`  openspec/config.yaml: ${openspecMode}`)
   }
 
   console.log('Scripts:')
@@ -240,6 +329,7 @@ function main() {
     'figma-cursor-setup.md',
     'figma-naming-guide.md',
     'project-features.md',
+    'agent-skills-setup.md',
   ]
   for (const docFile of docsToInstall) {
     const docsSrc = path.join(sourceRoot, 'docs', docFile)
@@ -258,9 +348,16 @@ function main() {
     mergePackageScripts(targetRoot, sourceRoot)
   }
 
+  if (opts.withAgentToolkit && !opts.skipAgentToolkit) {
+    runAgentToolkit(sourceRoot, targetRoot, opts.copy)
+  }
+
   console.log('')
   console.log('Done. Reload Cursor window so rules/skills take effect.')
   console.log('Optional: append templates/CLAUDE.md.snippet to your CLAUDE.md')
+  if (!opts.withAgentToolkit) {
+    console.log('Optional: node vendor/figma-mcp-rules/install.mjs --with-agent-toolkit')
+  }
 }
 
 main()

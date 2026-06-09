@@ -1,13 +1,30 @@
 ## Figma 設計還原
 
-完整說明見 **[docs/figma-cursor-setup.md](docs/figma-cursor-setup.md)**（或 submodule `vendor/figma-mcp-rules/docs/figma-cursor-setup.md`）。
+完整說明見 **[docs/figma-cursor-setup.md](docs/figma-cursor-setup.md)**（submodule `vendor/figma-mcp-rules/`）。
 
-- **Rules**：`.cursor/rules/figma-*.mdc`（含 **`figma-icon-export.mdc`** 父帧导出）、`project-conventions.mdc`
+- **Rules**：`.cursor/rules/figma-*.mdc`（含 **`figma-icon-export.mdc`**、**`figma-page-restore-dod.mdc`**）、`project-conventions.mdc`
 - **Skills**：`.cursor/skills/figma-implement-design/`、`figma-create-design-system-rules/`、`ui-refactor/`
 - **MCP**：`.cursor/mcp.json` → Figma（`https://mcp.figma.com/mcp`）
-- **資源路徑**：Figma **SVG 圖標** → `app/assets/icons/`；**位圖** → `app/assets/imgs/<子目錄>/`
-- **資源指令**：`pnpm icons:trim:manifest`、`pnpm icons:verify`、`pnpm assets:download`
+- **資源路徑**：SVG → `app/assets/icons/`；位圖 → `app/assets/imgs/<子目錄>/`
+- **資源指令**：`pnpm assets:download`、`pnpm icons:trim:manifest`、`pnpm icons:verify`
+- **同步 upstream**：`vendor/figma-mcp-rules/` → [figma-mcp-rules](https://github.com/123yang-gao/figma-mcp-rules)；更新后 `node vendor/figma-mcp-rules/install.mjs --copy`
+
+## Agent 工作流（Superpowers / gstack / OpenSpec）
+
+见 **[docs/agent-skills-setup.md](docs/agent-skills-setup.md)**。
+
+```bash
+pnpm agent:install   # figma-mcp-rules install + agent-toolkit
+```
+
+| 包 | 用途 |
+|---|---|
+| **Superpowers** | brainstorming、TDD、调试、计划与子 Agent |
+| **gstack** | `/review`、`/ship`、`/qa` 等（需 `bun` + `vendor/gstack`） |
+| **OpenSpec** | `/opsx:propose`、`/opsx:apply` 规格驱动变更 |
+
+**规范优先级**：本项目 `CLAUDE.md` + `project-conventions.mdc` + `figma-*` **高于** Superpowers 默认。
 
 ## Icon / SVG 規範
 
-**必須按 `.cursor/rules/figma-icon-export.mdc` 執行**（父帧 `icon-*` 整帧导出或合成，禁止子图层碎片）。viewBox trim / Flat Icon 合并见 `figma-svg-icons.mdc`。
+**必須按 `.cursor/rules/figma-icon-export.mdc` 執行**（父帧 `icon-*` 整帧导出或合成，禁止子图层碎片）。viewBox trim / Flat Icon 见 `figma-svg-icons.mdc`。

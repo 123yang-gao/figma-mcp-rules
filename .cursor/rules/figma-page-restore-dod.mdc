@@ -1,0 +1,83 @@
+---
+description: Figma 頁面還原完成定義 — 必須 pnpm dev 無錯、RWD 自適應依既有規則實作
+globs:
+  - app/pages/**
+  - app/components/**
+  - app/layouts/**
+alwaysApply: false
+---
+
+# Figma 頁面還原 — Definition of Done
+
+## Trigger
+
+完成 **Figma 設計稿 → 頁面/區塊 UI 還原**（含 `figma-implement-design`、`ui-refactor`、首頁/Modal/Shell 換皮）時，除 `lint-rule.mdc` 外須遵守本規則。
+
+## 1. 開發伺服器驗證（必做）
+
+宣告完成前**必須**執行 `pnpm dev`，確認**編譯與啟動無 error**：
+
+1. 終端執行 `pnpm dev`（port 4000）。
+2. 等待 Nuxt 輸出就緒（含 `Local:` / `Network:` 或等價成功訊息）。
+3. **逐項檢查 stdout/stderr**：不得有 `ERROR`、`Failed to compile`、`Cannot find module`、Vue/TS 編譯錯誤、未解析元件等。
+4. 若有 error → 修正後重跑，直到 `pnpm dev` 乾淨啟動。
+5. 驗證通過後可停止 dev 程序；**禁止**在未跑過 `pnpm dev` 的情況下宣佈頁面還原完成。
+
+與 `pnpm lint`、`pnpm type-check` **並列**，三者皆通過才可交付。
+
+## 2. RWD 自適應（必做）
+
+**以 Figma 设计稿为准**，不是机械做满固定断点。稿里有几档宽度、哪档布局/间距/列数有差异，就实现几档；稿面两档相同则不必多加 `@media`。
+
+### 常见参考宽度
+
+项目常见帧宽（**仅作对照，非强制全做**）：
+
+| 宽度 | 常见命名 | 说明 |
+|------|----------|------|
+| 375 | `mob_375` | mob 主档；`isMobile` 分支默认样式 |
+| 768 | 平板 | 稿面有差异时 `.is-web` 内 `@media (width >= 768px)` |
+| 1024 | 中桌面 | 同上 |
+| 1366 | 标准桌面 | 同上 |
+| 1920 | 宽屏 | 同上 |
+
+### 实现规则
+
+| 规则 | 做法 |
+|------|------|
+| Shell 结构分叉 | `useDevice().isMobile` / `isWeb()`（**UA**）— header、sidebar、bottom nav 显隐 |
+| Web 样式覆盖 | `:class="{ 'is-web': !isMobile }"` + scoped CSS |
+| 布局/间距/列数 | **仅当设计稿在该宽度与相邻档有差异**时，在 `.is-web` 内加对应 `@media (width >= Npx)`（mobile-first） |
+| 图片 | mob/web 分流；稿面各档不同图则各档换图 |
+| 验收 | 在**本任务 Figma 已提供的帧宽**下对照 screenshot；回報时列出已实现的档宽 |
+
+**典型模式：**
+
+- 稿仅 **mob + web 两帧**（如 `mob_375` + `web_1920`）→ `isMobile` + `.is-web` 一次覆盖即可，**不必**硬凑 768/1024/1366。
+- 稿有 **多帧且列数/间距随宽度变化**（如游戏网格）→ 按稿面宽度加 `@media`，参考 `FavGame.vue`、`games/[gameCategory].vue`。
+
+```scss
+// 仅示例：断点数量与 N 值以本页 Figma 帧为准
+&.is-web {
+  @media (width >= 768px) { /* 稿面 768 与 375 有差异时 */ }
+  @media (width >= 1366px) { /* 稿面 1366 有差异时 */ }
+}
+```
+
+**详细规则与 Shell 尺寸对照** → `.cursor/skills/ui-refactor/SKILL.md` § RWD 规则。
+
+### 禁止
+
+- 只做 375、完全忽略设计稿中的 web / 其他宽度帧
+- 用 viewport `@media` 代替 `isMobile` 做 header/sidebar/bottom nav **结构**分叉
+- **无稿面依据**却机械补齐 768/1024/1366/1920 五档 `@media`
+
+## 3. 完成前 Checklist（頁面還原）
+
+- [ ] **设计稿已提供的各档宽度**下布局与 Figma 一致（回報列出档宽清单）
+- [ ] Shell 结构分叉（`isMobile` / `.is-web`）符合稿面 mob/web 差异
+- [ ] 有差异的档宽已用 `@media` 或等价方式覆盖
+- [ ] `pnpm lint` 0 errors
+- [ ] `pnpm type-check` 通過（有改 TS 時）
+- [ ] **`pnpm dev` 啟動無 error**
+- [ ] 對照 Figma screenshot 目視驗收

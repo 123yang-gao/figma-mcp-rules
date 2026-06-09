@@ -1,0 +1,13 @@
+schema: spec-driven
+
+# Project context (optional) — customize after install.
+# Shown to AI when creating OpenSpec artifacts.
+context: |
+  Tech stack: Nuxt / Vue 3 / TypeScript
+  DoD: pnpm lint (0 errors); TS changes → pnpm type-check
+  Follow project .cursor/rules/ for i18n, components, and Figma restoration
+
+# Per-artifact rules (optional)
+# rules:
+#   proposal:
+#     - Keep proposals under 500 words

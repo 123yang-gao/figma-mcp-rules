@@ -16,7 +16,7 @@ Structured workflow for turning Figma nodes into code in this repository. Follow
 
 - Figma MCP server connected (`user-Figma` / `https://mcp.figma.com/mcp`)
 - User provides a frame or layer URL, e.g. `https://figma.com/design/:fileKey/:fileName?node-id=42-15`
-- Read `CLAUDE.md`, `.cursor/rules/figma-design-system.mdc`, `.cursor/rules/figma-pixel-perfect.mdc`, and (for login/register/forms) **`.cursor/rules/figma-auth-form.mdc`** before writing code
+- Read `CLAUDE.md`, `.cursor/rules/figma-design-system.mdc`, `.cursor/rules/figma-pixel-perfect.mdc`, **`.cursor/rules/figma-page-restore-dod.mdc`** (RWD + `pnpm dev` DoD), and (for login/register/forms) **`.cursor/rules/figma-auth-form.mdc`** before writing code
 
 ## When to use
 
@@ -202,12 +202,23 @@ Include **transform parity** from the Step 5 audit (flipped characters, mirrored
 
 ### Step 7: Validate
 
+Run verification **before** marking done:
+
+```bash
+pnpm lint
+pnpm type-check   # when TS changed
+pnpm dev          # must start without compile/startup errors
+```
+
 Compare the running UI (or built markup) to the Step 3 screenshot:
 
 - Layout, typography, colors, states (hover/disabled if in design)
 - Assets render
+- **RWD (mandatory for pages/shell):** follow **Figma frame widths for this page** per **`.cursor/rules/figma-page-restore-dod.mdc`** — `useDevice().isMobile` for shell, `.is-web` + `@media` only where design differs between widths
 - i18n keys present for both locales when text is user-facing
 - **Forms/Auth (if applicable):** password fields have no extra right icons; checkbox row alignment; checked glyph; close icon shape — per **`figma-auth-form.mdc`** §5 checklist
+
+Full page-restore DoD: **`.cursor/rules/figma-page-restore-dod.mdc`**
 
 ## MCP tool reference
 

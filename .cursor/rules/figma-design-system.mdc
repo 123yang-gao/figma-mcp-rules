@@ -14,7 +14,7 @@ alwaysApply: false
 ## Quick start（每次 Figma 任务）
 
 1. 加载技能 **`figma-implement-design`**，按步骤执行。
-2. 遵守规则优先级（见下）及专项文件：**`figma-icon-export.mdc`**（父帧 `icon-*` 整帧导出，alwaysApply）、**`figma-pixel-perfect.mdc`**、**`figma-raster-assets.mdc`**、**`figma-svg-icons.mdc`**、**`figma-auth-form.mdc`**（登入/註冊/表單 Modal）、**`megaphps2-molecules.mdc`**（按鈕/表單等互動狀態，Figma `26291-49389`）。
+2. 遵守规则优先级（见下）及专项文件：**`figma-icon-export.mdc`**（父帧 `icon-*` 整帧导出，alwaysApply）、**`figma-pixel-perfect.mdc`**、**`figma-raster-assets.mdc`**、**`figma-svg-icons.mdc`**、**`figma-page-restore-dod.mdc`**（頁面還原：`pnpm dev` + RWD）、**`figma-auth-form.mdc`**（登入/註冊/表單 Modal）、**`megaphps2-molecules.mdc`**（按鈕/表單等互動狀態，Figma `26291-49389`）。
 3. MCP：`https://mcp.figma.com/mcp`（`.cursor/mcp.json`）；工具缺失时在 Cursor → Settings → MCP 登录 Figma。
 
 ## Rule priority
@@ -26,8 +26,9 @@ alwaysApply: false
 5. **`.cursor/rules/figma-auth-form.mdc`** — 表單/Auth Modal（Input 右槽、Checkbox、Close、Nuxt 接線）；**實作 `@auth` 或 `Mega*` 表單元件時必讀**
 6. **`.cursor/rules/megaphps2-molecules.mdc`** — MOLECULES 互動規格（按鈕四態、Filter/Tab Selected、已落地頁面互動對照）
 7. **This file** — 项目结构、MCP 流程、检查清单
-8. **`.cursor/rules/lint-rule.mdc`** — 完成前须 `pnpm lint`
-9. Generic Figma MCP defaults
+8. **`.cursor/rules/figma-page-restore-dod.mdc`** — 頁面還原完成：`pnpm dev` 無錯 + RWD 自適應
+9. **`.cursor/rules/lint-rule.mdc`** — 完成前须 `pnpm lint`
+10. Generic Figma MCP defaults
 
 On conflict, higher priority wins.
 
@@ -147,6 +148,8 @@ background: url("~/assets/imgs/invite/invite-reward.png") center/contain;
 - [ ] Matches **`CLAUDE.md`** and **`figma-pixel-perfect.mdc`**
 - [ ] i18n：有规范 Key 用 `$t`；无 Key 已硬编码（见 **`project-conventions.mdc`**）；未临时新增 Key
 - [ ] `pnpm lint`（及 TS 变更时 `pnpm type-check`）
+- [ ] **`pnpm dev` 启动无 compile/启动 error**（见 **`figma-page-restore-dod.mdc`**）
+- [ ] **RWD**：按**本页 Figma 帧宽**实现，见 **`figma-page-restore-dod.mdc`** + **`ui-refactor`** § RWD 规则
 - [ ] Visual check against screenshot before done
 - [ ] **表單/Auth Modal**（若適用）：已讀 **`figma-auth-form.mdc`** §5 並逐項自檢（Input Right、Checkbox、Close、Nuxt 元件名）
 

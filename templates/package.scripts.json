@@ -4,5 +4,8 @@
   "assets:verify:raster": "node scripts/verify-raster-assets.mjs",
   "icons:trim": "node scripts/trim-svg-icons.mjs",
   "icons:trim:manifest": "node scripts/trim-svg-icons.mjs --manifest",
-  "icons:verify": "node scripts/verify-svg-icons.mjs"
+  "icons:verify": "node scripts/verify-svg-icons.mjs",
+  "agent:install": "node vendor/figma-mcp-rules/install.mjs --with-agent-toolkit",
+  "agent:gstack:gen": "cd vendor/gstack && bun run gen:skill-docs --host cursor",
+  "openspec:init": "npx --yes @fission-ai/openspec@latest init --tools cursor --profile core --force"
 }

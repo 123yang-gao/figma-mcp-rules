@@ -99,8 +99,8 @@ Composable + Store + API            ← 复用，不重写
 #### RWD 判断
 
 - `useDevice().isMobile` 依 **UA**，不是 viewport 宽度
-- 桌面浏览器窄窗口仍会走 web 分支；验收 web 请拉宽窗口或用真机
-- mob / web 尺寸分叉用 `:class="{ 'is-web': !isMobile }"`，勿只靠 `@media` 覆盖 header 高度
+- 桌面浏览器窄窗口仍会走 web 分支；验收 web 须在**本页 Figma 已提供的帧宽**下对照 screenshot
+- mob / web **结构**分叉用 `:class="{ 'is-web': !isMobile }"` + `v-if`；**布局/间距/列数**仅在稿面该档与相邻档有差异时加 `@media`
 
 ### Phase 2：抽 Composable（逻辑搬迁）
 
@@ -146,15 +146,16 @@ const flow = useBuyFlow()
 ```bash
 pnpm lint
 pnpm type-check
+pnpm dev   # 须启动成功、stdout/stderr 无 ERROR / 编译失败
 ```
 
-并逐项执行下方 **Verification Checklist**。
+并逐项执行下方 **Verification Checklist**。RWD 与 dev 启动细则见 **`.cursor/rules/figma-page-restore-dod.mdc`**。
 
 ---
 
 ## RWD 规则（本项目特有）
 
-**不是纯 CSS 自适应**，是「设备判断 + 样式分叉」：
+**以 Figma 设计稿为准**，结合「设备判断 + 按需 viewport 断点」。
 
 ```ts
 const { isMobile } = useDevice()
@@ -164,13 +165,21 @@ const { isMobile } = useDevice()
 | 手段 | 用法 |
 |------|------|
 | `:class="{ 'is-web': !isMobile }"` | 桌面覆盖样式 |
-| `v-if="isMobile"` / `v-if="!isMobile"` | 显隐不同区块 |
+| `v-if="isMobile"` / `v-if="!isMobile"` | Shell 显隐（header、sidebar、bottom nav） |
 | 不同图片 | `isMobile ? mImg : wImg`；Banner 用 `m_` / `w_` groupName |
-| `.is-web` 内 `@media` | 375 / 768 / 1366 / 1920 列数渐变 |
+| `.is-web` 内 `@media` | **仅当稿面该宽度与相邻档布局有差异**时添加；常见参考：375 / 768 / 1024 / 1366 / 1920 |
 | `clamp()` | 弹窗宽度 |
 | `Px` + prettier-ignore | 不转 rem |
 
-Figma 有 `web` + `mob_375` 两套稿时，**两套都要实现**。
+### 按稿面决定断点
+
+| 设计稿情况 | 实现 |
+|------------|------|
+| 仅 mob + web 两帧 | `isMobile` + `.is-web` 一次覆盖，不必硬凑中间断点 |
+| 多帧且列数/间距随宽度变 | 按稿面宽度加 `@media`，参考 `FavGame.vue`、`games/[gameCategory].vue` |
+| 某档与相邻档视觉相同 | 不单独加 `@media` |
+
+Phase 1 从 Figma metadata 列出**本页实际帧宽**，作为 RWD 验收清单。
 
 ---
 
@@ -220,8 +229,9 @@ Figma 有 `web` + `mob_375` 两套稿时，**两套都要实现**。
 
 ### UI 与 RWD
 
-- [ ] mob（375）布局与 Figma 一致
-- [ ] web（1366/1920）`.is-web` 分支已实现
+- [ ] 设计稿已提供的各档宽度下布局与 Figma 一致（列出档宽清单）
+- [ ] Shell 结构分叉（`isMobile` / `.is-web`）符合稿面
+- [ ] 有差异的档宽已用 `@media` 或等价方式实现
 - [ ] **header / sidebar / bottom nav 已单独对照 Figma 子节点尺寸**（非整页推断）
 - [ ] web header 高度、分段导航、按钮尺寸与稿一致
 - [ ] 无硬编码用户可见文字（全 `$t`）
@@ -240,6 +250,7 @@ Figma 有 `web` + `mob_375` 两套稿时，**两套都要实现**。
 
 - [ ] `pnpm lint` 0 errors
 - [ ] `pnpm type-check` 通过
+- [ ] **`pnpm dev` 启动无 error**（编译、模块解析、Vue 元件均正常）
 - [ ] 无 `any`；store 手动 import
 - [ ] Presenter 无 store 直接调用
 

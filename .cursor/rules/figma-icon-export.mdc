@@ -1,0 +1,89 @@
+---
+description: Figma icon 必須從父帧 icon-* 整帧导出或合成 SVG；禁止下载 Vector/Union 子图层碎片
+alwaysApply: true
+---
+
+# Figma Icon 导出规范（强制）
+
+凡从 Figma 落地 `app/assets/icons/*.svg`，**必须**按本规则执行。详细工作流见 `.cursor/skills/ui-refactor/SKILL.md`。
+
+## 核心原则
+
+| 必须 | 禁止 |
+|------|------|
+| 对 **`icon-*` 父帧**（通常 24×24 正方形）取 icon | 对 inner `Vector` / `Union` 子图层单独落盘当最终 icon |
+| 输出**一个**完整 SVG 文件 | 多个 `<img>` 碎片拼接、手写 path、近似图形 |
+| 仅机械清理（`currentColor`、删 Figma 冗余属性） | 正则只抽第一个 `d="..."` 批量清洗、改 path 形状 |
+
+## 标准流程
+
+### Step 1 — 定位父帧
+
+1. `get_metadata` 在目标区块（header / sidebar / bottom nav）内找 **`icon-{name}`** 图层。
+2. 确认父帧为**正方形**（常见 24×24）；记录 **nodeId**（URL 中 `-` 转 `:`）。
+3. **不要**对子图层 `Vector` / `Union` 的 nodeId 下载。
+
+### Step 2 — 导出整帧 SVG（按优先级）
+
+**首选 — Figma REST API（与手动 Export 一致）**
+
+```http
+GET https://api.figma.com/v1/images/{fileKey}?ids={parentNodeId}&format=svg
+Authorization: Bearer {FIGMA_ACCESS_TOKEN}
+```
+
+- 下载返回 URL 中的 SVG → `app/assets/icons/{区块}-{名称}.svg`
+- 需要环境变量 `FIGMA_ACCESS_TOKEN`
+
+**次选 — 设计师手动 Export**
+
+- Figma 选中父帧 `icon-*` → Export SVG → 落盘同路径
+
+**兜底 — MCP 父帧合成**（无 REST token 时）
+
+1. 对**父帧 nodeId** 调 `get_design_context`（不是子 Vector）。
+2. 从返回的 React 结构读取：
+   - 父帧尺寸 `W×H`（metadata 或 `size-[Wpx]`，常见 24×24）
+   - 每个 child 的 `inset-[top_right_bottom_left]`（Tailwind 百分比）
+3. 下载每个 child 的 `img*` asset URL 到 `app/assets/icons/_figma_raw/`（可选，供对照）。
+4. **合成一个 SVG**：
+   - 根元素 `viewBox="0 0 W H"`（保留父帧尺寸，**勿**强行改成别的 viewBox）
+   - 将每个 child 的 path/circle 放入 `<g transform="translate(x y)">` 或换算为绝对坐标
+   - inset 换算：`x = W * left%`，`y = H * top%`（四边 inset 与 Figma 一致）
+5. **禁止**只取第一个 `imgVector` 当作最终 icon。
+
+### Step 3 — 机械清理
+
+- `fill` / `stroke` 中稿面色 → `currentColor`（固定品牌色由 CSS `color` 控制时同样用 `currentColor`）
+- 删除 `preserveAspectRatio="none"`、`width="100%"`、inline `style` 等 Figma 导出噪音
+- **不得**修改 path 的 `d`、合并/拆分形状
+
+### Step 4 — 组件引用
+
+- 落盘 `app/assets/icons/{区块}-{名称}.svg`
+- Vue 中用 `svgo-{文件名}`；stroke 图标**不得**加 `filled`
+- 复用判定：path + viewBox 与稿**完全一致**才可共用；header / sidebar 同名 icon 仍须逐节点对比
+
+## 合成示例（`icon-account` 13:2292，24×24）
+
+父帧 `get_design_context` 给出：
+
+- 头：`inset-[8.33%_33.33%_58.33%_33.33%]` → 区域 (8,2) 8×8 → 圆 `cx=12 cy=6 r=4`
+- 身：`inset-[54.17%_16.67%_8.33%_16.67%]` → 区域 (4,13) 16×9 → path + `translate(4 13)`
+
+合成 `sidebar-account.svg` 单文件，`viewBox="0 0 24 24"`。
+
+## MCP 与错误做法对照
+
+| 做法 | 结果 |
+|------|------|
+| 子图层 asset 直接落盘 | 8×8 圆、20×20 path 等碎片，与稿差很大 |
+| 父帧 REST Export / 手动 Export | 与 Figma 右键 Export **一致** |
+| 父帧 MCP 合成 | 无 token 时最接近手动 Export |
+| PowerShell 正则抽 `d` | 丢 Union / 多 path，**禁止** |
+
+## 失败处理
+
+- 换 `Invoke-WebRequest` / 重试 / 换父帧 nodeId
+- 仍失败 → **向用户回报阻塞**，不得手画或凑合
+- 可选：请用户提供手动 Export 的 SVG 替换

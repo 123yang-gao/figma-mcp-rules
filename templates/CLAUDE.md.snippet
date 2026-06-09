@@ -2,8 +2,12 @@
 
 完整說明見 **[docs/figma-cursor-setup.md](docs/figma-cursor-setup.md)**（或 submodule `vendor/figma-mcp-rules/docs/figma-cursor-setup.md`）。
 
-- **Rules**：`.cursor/rules/figma-*.mdc`、`project-conventions.mdc`
-- **Skills**：`.cursor/skills/figma-implement-design/`、`figma-create-design-system-rules/`
+- **Rules**：`.cursor/rules/figma-*.mdc`（含 **`figma-icon-export.mdc`** 父帧导出）、`project-conventions.mdc`
+- **Skills**：`.cursor/skills/figma-implement-design/`、`figma-create-design-system-rules/`、`ui-refactor/`
 - **MCP**：`.cursor/mcp.json` → Figma（`https://mcp.figma.com/mcp`）
 - **資源路徑**：Figma **SVG 圖標** → `app/assets/icons/`；**位圖** → `app/assets/imgs/<子目錄>/`
 - **資源指令**：`pnpm icons:trim:manifest`、`pnpm icons:verify`、`pnpm assets:download`
+
+## Icon / SVG 規範
+
+**必須按 `.cursor/rules/figma-icon-export.mdc` 執行**（父帧 `icon-*` 整帧导出或合成，禁止子图层碎片）。viewBox trim / Flat Icon 合并见 `figma-svg-icons.mdc`。

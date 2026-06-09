@@ -8,7 +8,7 @@
 
 | 目录 | 说明 |
 |------|------|
-| `.cursor/rules/` | 8 条规则（Figma 专项 + 项目惯例 + lint DoD） |
+| `.cursor/rules/` | 9 条规则（Figma 专项 + 项目惯例 + lint DoD） |
 | `.cursor/skills/` | 4 个 Skill（implement-design、create-design-system-rules、init-brand-branch、ui-refactor） |
 | `.cursor/mcp.json` | Figma MCP 配置模板 |
 | `scripts/` | 资源下载、SVG trim/verify、位图 verify、Flat Icon 合并库 |
@@ -19,6 +19,7 @@
 
 ### Rules
 
+- `figma-icon-export.mdc` — 父帧 `icon-*` 整帧 SVG 导出/合成（**alwaysApply**）
 - `figma-design-system.mdc` — 总入口、MCP 流程、检查清单
 - `figma-pixel-perfect.mdc` — 1:1 像素还原
 - `figma-raster-assets.mdc` — 位图 2×、`get_screenshot`

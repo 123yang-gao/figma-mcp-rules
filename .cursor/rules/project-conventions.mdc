@@ -63,7 +63,8 @@ alwaysApply: true
 ### 原則
 
 - UI 圖標落盤 **`app/assets/icons/`**（扁平 `.svg`），頁面使用 **nuxt-svgo**（`<svgo-*>`）。
-- **Flat Icon / 侧栏导航（24×24）**：须按 **`figma-svg-icons.mdc`** § **Flat Icon — Dev Mode 等价导出**（`compose-figma-flat-icon.mjs` 或 Figma Export SVG）；**禁止** trim 合并件、禁止 per-icon glyph 二次缩放。
+- **取层与导出（全项目）**：须按 **`figma-icon-export.mdc`** 对父帧 `icon-*` 整帧导出或合成；**禁止**子图层碎片、手写 path、近似 SVG。
+- **Flat Icon / 侧栏导航（24×24）**：在父帧导出基础上，须按 **`figma-svg-icons.mdc`** § **Flat Icon — Dev Mode 等价导出**（`compose-figma-flat-icon.mjs` 或 Figma Export SVG）；**禁止** trim 合并件、禁止 per-icon glyph 二次缩放。
 - 其他 icon 的 trim/verify 见 **`figma-svg-icons.mdc`**。
 - 設計稿出現**老項目存量圖標庫不存在**的圖標 → **一律依最新 Figma 重新切圖導出**，寫入 `app/assets/icons/`。
 
@@ -88,4 +89,5 @@ alwaysApply: true
 | i18n 硬编码 vs Key | §1 | `CLAUDE.md` 多語系（以本文件為準） |
 | 組件目錄與 Figma 流程 | §2 | `figma-design-system.mdc` |
 | 表單/Auth 還原（Input/Checkbox/Close） | — | **`figma-auth-form.mdc`** |
+| Icon 父帧导出 | §3 | **`figma-icon-export.mdc`** |
 | SVG trim / viewBox | §3 | `figma-svg-icons.mdc` |

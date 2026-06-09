@@ -20,8 +20,11 @@ description: >-
 | 删 stub 页 `definePageMeta`（middleware/permission） | 门禁用 |
 | Presenter 内直接调 store / API | 逻辑应在 Container / composable |
 | `router.push` 开模态页 | 必须用 `PlusModalLink` / `useModalRouter` |
-| 硬写用户可见文字 | 必须 `$t('key')`，新 key 走 `pnpm i18n` |
+| 硬写用户可见文字 | 默认必须 `$t('key')`，新 key 走 `pnpm i18n` |
+| **UI 重构阶段 locales 无 key** | **可先写死 Figma 稿面文案**（集中放 `app/constants/`，注释待 `pnpm i18n` 替换） |
 | 使用 `any` | 项目 TypeScript 规范 |
+| **手写 / 近似 SVG** | 图标必须按 **父帧 icon-* 整帧** 导出或合成（见 `.cursor/rules/figma-icon-export.mdc`）；**不得**手画 path、下子图层碎片、描摹 |
+| **复用不完全相同的 icon** | 仅当设计稿节点与既有 SVG **完全一致**（同一 asset / 相同 path）才可复用；形状、线宽、细节有任何差异须单独下载 |
 
 ## 架构分层
 
@@ -47,9 +50,57 @@ Composable + Store + API            ← 复用，不重写
 
 1. 从 URL 提取 `fileKey`、`nodeId`（`-` 转 `:`）
 2. `get_metadata` → 核对图层名是否符合 `docs/figma-naming-guide.md`
-3. `get_design_context` + `get_screenshot`（节点过大则拆子节点）
-4. 有 Code Connect 则优先用映射组件
-5. 命名对不上时，按截图 + 标注推断，并在回報時列出假设
+3. **Shell 区块（header / sidebar / bottom nav / footer）必须单独对子节点 `get_design_context`**，禁止只拉整页 symbol 后猜测尺寸
+4. `get_design_context` + `get_screenshot`（节点过大则拆子节点）
+5. 有 Code Connect 则优先用映射组件
+6. 命名对不上时，按截图 + 标注推断，并在回報時列出假设
+
+#### Shell 尺寸对照（MOJOGO 示例，实现前写入 `_vars.scss`）
+
+| 区块 | mob (375) | web (1920) | 常见误区 |
+|------|-----------|------------|----------|
+| `sec/header` | 高 60px；padding 12×8；btn 36px；logo 22px | 高 **76px**；padding 16×48；btn **44px**；logo **36px** | 勿 mob/web 共用 60px |
+| Web 导航 | 无（仅 logo + 登录区） | **分段 Tab 容器**（fifth/10 底 + 2px 分隔 + active 绿底），非独立 pill | 勿写成三个分离按钮 |
+| Header Tab 图标 | `icon-home` / `icon-casino` / `icon-promotion` / `icon-notice` | 父帧 Export/合成 → `header-*.svg`（见 `figma-icon-export.mdc`） | 禁止子图层碎片；略有差异须独立文件 |
+| Tab 图标颜色 | 未选中 `#9aa1b1`（first-300） | 选中 `#fafafa`（first-100）+ 绿底 | 下载后把 `fill` 改为 `currentColor` |
+| `sidebar` | overlay 280px | 常駐 280px；header `left:280px` | header 已在 layout-main 内，用 `fixed + left` 对齐，勿重复 margin |
+| `bottom nav` | 60px；Buy Coins 凸起 | 无 | 仅 `isMobile` |
+
+**Icon 规范（铁律，全项目适用）：**
+
+> 完整步骤见 **`.cursor/rules/figma-icon-export.mdc`**（alwaysApply）。以下为摘要。
+
+| 允许 | 禁止 |
+|------|------|
+| 父帧 `icon-*` REST Export / 手动 Export / MCP 合成单文件 SVG | 子图层 `Vector` asset 直接落盘、手写 path、近似图形 |
+| 机械清理：`fill`/`stroke` → `currentColor`、删 Figma 冗余属性 | 改 path 形状、正则只抽第一个 `d`、强行改 viewBox |
+| path + viewBox 完全一致才可复用 | 凭名称相似复用 header/sidebar icon |
+
+**Icon 下载流程（必做）：**
+
+1. `get_metadata` → **icon 父帧**（`icon-account`、`icon-lobby` 等，通常 **24×24**），**不对** inner `Vector`/`Union` 取 asset
+2. 对**父帧 nodeId** 调 `get_design_context`
+3. **导出整帧 SVG**（优先级）：
+   - **首选**：Figma REST `GET /v1/images/{fileKey}?ids={parentNodeId}&format=svg`
+   - **次选**：设计师手动 Export 父帧
+   - **兜底**：MCP 父帧合成——读 child 的 `inset-[…%]`，下载各 child asset，合成 `viewBox="0 0 W H"` 单 SVG（示例：`sidebar-account.svg`）
+4. 机械清理；**保留父帧 viewBox**
+5. 落盘 `app/assets/icons/{区块}-{名称}.svg`；组件用 `svgo-*`，stroke 图标不加 `filled`
+6. 原始 child 可选存 `_figma_raw/` 供对照
+
+**MCP 与手动 Export 的差异：**
+
+| 取层 | 结果 |
+|------|------|
+| 子图层 `Vector` asset | 碎片，viewBox 紧贴 path，与稿差很多 |
+| 父帧 REST / 手动 Export | 与 Figma Export SVG **一致** |
+| 父帧 MCP 合成 | 无 token 时最接近手动 Export |
+
+#### RWD 判断
+
+- `useDevice().isMobile` 依 **UA**，不是 viewport 宽度
+- 桌面浏览器窄窗口仍会走 web 分支；验收 web 请拉宽窗口或用真机
+- mob / web 尺寸分叉用 `:class="{ 'is-web': !isMobile }"`，勿只靠 `@media` 覆盖 header 高度
 
 ### Phase 2：抽 Composable（逻辑搬迁）
 
@@ -171,8 +222,11 @@ Figma 有 `web` + `mob_375` 两套稿时，**两套都要实现**。
 
 - [ ] mob（375）布局与 Figma 一致
 - [ ] web（1366/1920）`.is-web` 分支已实现
+- [ ] **header / sidebar / bottom nav 已单独对照 Figma 子节点尺寸**（非整页推断）
+- [ ] web header 高度、分段导航、按钮尺寸与稿一致
 - [ ] 无硬编码用户可见文字（全 `$t`）
 - [ ] 图片资源 mob/web 正确分流（如适用）
+- [ ] icon 按 **父帧 icon-* 整帧** 导出或合成（见 `.cursor/rules/figma-icon-export.mdc`）；无子图层碎片 / 手写 / 近似 path
 
 ### 功能绑定
 

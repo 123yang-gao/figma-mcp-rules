@@ -8,7 +8,9 @@ alwaysApply: false
 
 # Figma SVG 图标 — viewBox 留白（强制）
 
-编辑 `app/assets/icons/` 或任何使用 **nuxt-svgo**（`<svgo-*>`）的组件时，**必须**遵守本节。通用 TypeScript / i18n 規範見 **`CLAUDE.md`**；**Icon 是否复用旧库、是否必须重新导出** 见 **`project-conventions.mdc`** § Icon 资源。
+编辑 `app/assets/icons/` 或任何使用 **nuxt-svgo**（`<svgo-*>`）的组件时，**必须**遵守本节。通用 TypeScript / i18n 規範見 **`CLAUDE.md`**。
+
+**导出取层（优先）**：须按 **`figma-icon-export.mdc`** 对 **24×24 父帧 `icon-*`** 整帧 REST Export / 手动 Export / MCP 合成；**禁止**只下 inner `Vector`/`Union` 子 asset。本节补充 viewBox trim、Flat Icon 合并、nuxt-svgo 用法；**Icon 是否复用旧库** 见 **`project-conventions.mdc`** § Icon 资源。
 
 ## 落盘位置（强制）
 

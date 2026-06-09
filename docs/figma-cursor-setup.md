@@ -28,6 +28,7 @@ Agent 编辑 `app/**`、`app/assets/**` 时，Cursor 按 `globs` 自动加载对
 | 文件 | 作用 |
 |------|------|
 | `project-conventions.mdc` | 全项目：i18n 文案、禁止改公共组件凑设计、Icon 须从 Figma 导出。 |
+| `figma-icon-export.mdc` | **alwaysApply**：父帧 `icon-*` 整帧 SVG 导出/合成；禁止子图层碎片。 |
 | `figma-design-system.mdc` | 总说明：Figma MCP 怎么用、资源放哪、实现检查项、规则优先级。 |
 | `figma-pixel-perfect.mdc` | 还原约束：固定 px、旋转/翻转、背景与描边、渐变边框、Swiper、资源本地化。 |
 | `figma-raster-assets.mdc` | 位图：`imgs/<子目录>/`、2× 导出、`get_screenshot`、校验命令。 |
@@ -44,6 +45,7 @@ Agent 编辑 `app/**`、`app/assets/**` 时，Cursor 按 `globs` 自动加载对
 |------|------|
 | `figma-implement-design/` | Figma → Vue 完整流程（**日常必用**）。 |
 | `figma-create-design-system-rules/` | 扫描仓库后更新 `figma-design-system.mdc`。 |
+| `ui-refactor/` | sweepstakes-shell 页面 UI 重构（含 `bindings.md`、Shell 尺寸、父帧 icon 流程）。 |
 | `init-brand-branch/` | 新品牌分支初始化（sweepstakes 专用，可选）。 |
 
 ---

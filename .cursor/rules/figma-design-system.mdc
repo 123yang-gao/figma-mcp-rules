@@ -14,19 +14,20 @@ alwaysApply: false
 ## Quick start（每次 Figma 任务）
 
 1. 加载技能 **`figma-implement-design`**，按步骤执行。
-2. 遵守规则优先级（见下）及专项文件：**`figma-pixel-perfect.mdc`**、**`figma-raster-assets.mdc`**、**`figma-svg-icons.mdc`**、**`figma-auth-form.mdc`**（登入/註冊/表單 Modal）、**`megaphps2-molecules.mdc`**（按鈕/表單等互動狀態，Figma `26291-49389`）。
+2. 遵守规则优先级（见下）及专项文件：**`figma-icon-export.mdc`**（父帧 `icon-*` 整帧导出，alwaysApply）、**`figma-pixel-perfect.mdc`**、**`figma-raster-assets.mdc`**、**`figma-svg-icons.mdc`**、**`figma-auth-form.mdc`**（登入/註冊/表單 Modal）、**`megaphps2-molecules.mdc`**（按鈕/表單等互動狀態，Figma `26291-49389`）。
 3. MCP：`https://mcp.figma.com/mcp`（`.cursor/mcp.json`）；工具缺失时在 Cursor → Settings → MCP 登录 Figma。
 
 ## Rule priority
 
 1. **`CLAUDE.md`** — TypeScript、i18n、lint、專案慣例
-2. **`.cursor/rules/project-conventions.mdc`** — i18n 文案、組件復用、Icon 資源（alwaysApply）
-3. **`.cursor/rules/figma-pixel-perfect.mdc`** — 1:1 像素级还原（§1–9）
-4. **`.cursor/rules/figma-auth-form.mdc`** — 表單/Auth Modal（Input 右槽、Checkbox、Close、Nuxt 接線）；**實作 `@auth` 或 `Mega*` 表單元件時必讀**
-5. **`.cursor/rules/megaphps2-molecules.mdc`** — MOLECULES 互動規格（按鈕四態、Filter/Tab Selected、已落地頁面互動對照）
-6. **This file** — 项目结构、MCP 流程、检查清单
-7. **`.cursor/rules/lint-rule.mdc`** — 完成前须 `pnpm lint`
-8. Generic Figma MCP defaults
+2. **`.cursor/rules/figma-icon-export.mdc`** — 父帧 `icon-*` 整帧 SVG 导出/合成（alwaysApply）
+3. **`.cursor/rules/project-conventions.mdc`** — i18n 文案、組件復用、Icon 資源（alwaysApply）
+4. **`.cursor/rules/figma-pixel-perfect.mdc`** — 1:1 像素级还原（§1–9）
+5. **`.cursor/rules/figma-auth-form.mdc`** — 表單/Auth Modal（Input 右槽、Checkbox、Close、Nuxt 接線）；**實作 `@auth` 或 `Mega*` 表單元件時必讀**
+6. **`.cursor/rules/megaphps2-molecules.mdc`** — MOLECULES 互動規格（按鈕四態、Filter/Tab Selected、已落地頁面互動對照）
+7. **This file** — 项目结构、MCP 流程、检查清单
+8. **`.cursor/rules/lint-rule.mdc`** — 完成前须 `pnpm lint`
+9. Generic Figma MCP defaults
 
 On conflict, higher priority wins.
 
